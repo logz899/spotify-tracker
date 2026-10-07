@@ -50,6 +50,9 @@ golangci-lint version 2>/dev/null | grep -q "version $GOLANGCI_LINT_VERSION" || 
 step "repository hygiene"
 bash scripts/check-repository-hygiene.sh
 
+step "public snapshot staging"
+bash scripts/test-create-public-snapshot.sh
+
 step "cloud run deployment policy"
 bash scripts/check-cloudrun-config.sh
 

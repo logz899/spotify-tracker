@@ -20,9 +20,9 @@ gcp.env
 *.dylib
 *.test
 *.out
-server
-api
-migrate
+/server
+/api
+/migrate
 tmp/
 go.work
 vendor/
