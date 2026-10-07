@@ -1,0 +1,46 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+gcp.env
+
+# Go output
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+server
+api
+migrate
+tmp/
+go.work
+vendor/
+
+# Legacy Python output
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+
+# Test output
+coverage/
+test-results/
+
+# Editors and operating systems
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

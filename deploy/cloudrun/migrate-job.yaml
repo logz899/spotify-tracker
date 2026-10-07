@@ -1,0 +1,35 @@
+# Private Cloud Run Job that applies database migrations once and exits.
+# It receives only the database URL secret.
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: ${MIGRATE_JOB_NAME}
+  labels:
+    app: spotify-song-rank
+    component: migrate
+spec:
+  template:
+    spec:
+      taskCount: 1
+      parallelism: 1
+      template:
+        spec:
+          serviceAccountName: ${MIGRATE_SERVICE_ACCOUNT}
+          maxRetries: 0
+          timeoutSeconds: 300
+          containers:
+            - image: ${IMAGE}
+              command: ['/app/migrate']
+              args: ['up']
+              resources:
+                limits:
+                  cpu: '1'
+                  memory: 512Mi
+              env:
+                - name: APP_ENV
+                  value: production
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: database-url
+                      key: latest

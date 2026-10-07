@@ -1,0 +1,73 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: ${API_SERVICE_NAME}
+  labels:
+    app: spotify-song-rank
+    component: api
+spec:
+  template:
+    metadata:
+      annotations:
+        # Request-based billing: CPU is allocated only while serving requests.
+        run.googleapis.com/cpu-throttling: 'true'
+        autoscaling.knative.dev/minScale: '0'
+        autoscaling.knative.dev/maxScale: '1'
+    spec:
+      serviceAccountName: ${API_SERVICE_ACCOUNT}
+      containerConcurrency: 40
+      timeoutSeconds: 30
+      containers:
+        - image: ${IMAGE}
+          command: ['/app/server']
+          ports:
+            - name: http1
+              containerPort: 8000
+          resources:
+            limits:
+              cpu: '1'
+              memory: 256Mi
+          startupProbe:
+            httpGet:
+              path: /api/v1/health
+            periodSeconds: 5
+            failureThreshold: 6
+          env:
+            - name: APP_ENV
+              value: production
+            - name: GIN_MODE
+              value: release
+            - name: SERVER_PORT
+              value: '8000'
+            - name: FRONTEND_URL
+              value: ${FRONTEND_URL}
+            - name: CORS_ALLOWED_ORIGINS
+              value: ${CORS_ALLOWED_ORIGINS}
+            - name: SPOTIFY_CLIENT_ID
+              value: ${SPOTIFY_CLIENT_ID}
+            - name: SPOTIFY_REDIRECT_URI
+              value: ${SPOTIFY_REDIRECT_URI}
+            - name: JWT_ISSUER
+              value: ${JWT_ISSUER}
+            - name: JWT_AUDIENCE
+              value: ${JWT_AUDIENCE}
+            - name: SPOTIFY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: spotify-client-secret
+                  key: latest
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret
+                  key: latest
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: database-url
+                  key: latest
+            - name: TOKEN_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: token-encryption-key
+                  key: latest

@@ -1,0 +1,3 @@
+DROP INDEX IF EXISTS idx_songs_album_id;
+ALTER TABLE songs DROP COLUMN IF EXISTS album_id;
+DROP TABLE IF EXISTS albums;

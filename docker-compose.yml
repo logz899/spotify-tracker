@@ -1,0 +1,54 @@
+services:
+  backend:
+    container_name: backend
+    build: ./backend
+    ports:
+      - 8000:8000
+    env_file:
+      - .env
+    environment:
+      # Override specific values for Docker environment
+      GIN_MODE: 'release'
+      DB_HOST: 'db'  # Use container name instead of localhost
+      DATABASE_URL: 'postgres://postgres:postgres@db:5432/postgres?sslmode=disable'
+      JWT_ISSUER: 'spotify-song-rank'
+      JWT_AUDIENCE: 'spotify-song-rank-web'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: on-failure
+
+  # Applies backend/migrations to the local database, then exits.
+  migrate:
+    container_name: migrate
+    build: ./backend
+    command: ['/app/migrate', 'up']
+    environment:
+      DATABASE_URL: 'postgres://postgres:postgres@db:5432/postgres?sslmode=disable'
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: 'no'
+
+  frontend:
+    container_name: frontend
+    build: ./frontend
+    ports:
+      - 3000:3000
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+
+  db:
+    image: postgres:13
+    ports:
+     - 5432:5432
+    environment:
+     - POSTGRES_USER=postgres
+     - POSTGRES_PASSWORD=postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5

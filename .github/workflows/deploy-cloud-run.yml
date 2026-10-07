@@ -1,0 +1,106 @@
+name: Deploy Cloud Run
+
+# Manual only. Requires the `production` environment (with required reviewers)
+# and repository variables listed in deploy/cloudrun/README.md. Authenticates
+# with Workload Identity Federation; no service-account JSON key exists.
+# One-time resources (secrets, service accounts, Scheduler, budget) are never
+# created here.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type "deploy" to build, migrate, and deploy the current commit
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-cloud-run
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION }}
+      AR_REPO: ${{ vars.GCP_AR_REPO }}
+      API_SERVICE_NAME: ${{ vars.API_SERVICE_NAME }}
+      MIGRATE_JOB_NAME: ${{ vars.MIGRATE_JOB_NAME }}
+      SYNC_JOB_NAME: ${{ vars.SYNC_JOB_NAME }}
+      API_SERVICE_ACCOUNT: ${{ vars.API_SERVICE_ACCOUNT }}
+      MIGRATE_SERVICE_ACCOUNT: ${{ vars.MIGRATE_SERVICE_ACCOUNT }}
+      SYNC_SERVICE_ACCOUNT: ${{ vars.SYNC_SERVICE_ACCOUNT }}
+      FRONTEND_URL: ${{ vars.FRONTEND_URL }}
+      CORS_ALLOWED_ORIGINS: ${{ vars.CORS_ALLOWED_ORIGINS }}
+      SPOTIFY_CLIENT_ID: ${{ vars.SPOTIFY_CLIENT_ID }}
+      SPOTIFY_REDIRECT_URI: ${{ vars.SPOTIFY_REDIRECT_URI }}
+      JWT_ISSUER: ${{ vars.JWT_ISSUER }}
+      JWT_AUDIENCE: ${{ vars.JWT_AUDIENCE }}
+      WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+      DEPLOY_SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+    steps:
+      - name: Require confirmation and configuration
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          [[ "$CONFIRM" == "deploy" ]] || { echo "::error::confirm input must be \"deploy\""; exit 1; }
+          missing=0
+          for var in PROJECT_ID REGION AR_REPO API_SERVICE_NAME MIGRATE_JOB_NAME SYNC_JOB_NAME \
+            API_SERVICE_ACCOUNT MIGRATE_SERVICE_ACCOUNT SYNC_SERVICE_ACCOUNT FRONTEND_URL \
+            CORS_ALLOWED_ORIGINS SPOTIFY_CLIENT_ID SPOTIFY_REDIRECT_URI JWT_ISSUER JWT_AUDIENCE \
+            WIF_PROVIDER DEPLOY_SERVICE_ACCOUNT; do
+            if [[ -z "${!var}" ]]; then
+              echo "::error::repository variable for $var is not set"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Pre-deploy verification
+        run: |
+          bash scripts/check-cloudrun-config.sh
+          (cd backend && go vet ./... && go test -count=1 ./...)
+
+      - id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+
+      # Writes identifiers only; secret values stay in Secret Manager.
+      - name: Write deploy/cloudrun/gcp.env
+        run: |
+          for var in PROJECT_ID REGION AR_REPO API_SERVICE_NAME MIGRATE_JOB_NAME SYNC_JOB_NAME \
+            API_SERVICE_ACCOUNT MIGRATE_SERVICE_ACCOUNT SYNC_SERVICE_ACCOUNT FRONTEND_URL \
+            CORS_ALLOWED_ORIGINS SPOTIFY_CLIENT_ID SPOTIFY_REDIRECT_URI JWT_ISSUER JWT_AUDIENCE; do
+            printf '%s=%s\n' "$var" "${!var}"
+          done > deploy/cloudrun/gcp.env
+
+      # Push image, run the migration job to completion, then update the API
+      # service and the sync job (see Makefile target cloudrun-deploy).
+      - name: Build, migrate, and deploy
+        run: CONFIRM_DEPLOY=yes make cloudrun-deploy

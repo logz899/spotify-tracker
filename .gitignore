@@ -1,0 +1,74 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+gcp.env
+**/gcp.env
+
+# Version-control and agent scratch data
+.git/
+.worktrees/
+.superpowers/
+.agent/**/*~
+.agent/**/backup/
+
+# Go output
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+server
+api
+migrate
+tmp/
+go.work
+vendor/
+
+# Python output
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node output
+node_modules/
+build/
+dist/
+coverage/
+.pnp
+.pnp.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test and application output
+log/
+logs/
+test-results/
+playwright-report/
+
+# Local notebooks
+spotify_crawler.ipynb
+track_image.ipynb
+test.ipynb
+
+# Editors and operating systems
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+.claude/
+
+# Rendered Cloud Run manifests (contain project identifiers)
+deploy/cloudrun/rendered/

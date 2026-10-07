@@ -1,0 +1,63 @@
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: ${SYNC_JOB_NAME}
+  labels:
+    app: spotify-song-rank
+    component: sync
+spec:
+  template:
+    spec:
+      taskCount: 1
+      parallelism: 1
+      template:
+        spec:
+          serviceAccountName: ${SYNC_SERVICE_ACCOUNT}
+          maxRetries: 0
+          timeoutSeconds: 720
+          containers:
+            - image: ${IMAGE}
+              command: ['/app/sync']
+              resources:
+                limits:
+                  cpu: '1'
+                  memory: 512Mi
+              env:
+                - name: APP_ENV
+                  value: production
+                - name: GIN_MODE
+                  value: release
+                - name: FRONTEND_URL
+                  value: ${FRONTEND_URL}
+                - name: CORS_ALLOWED_ORIGINS
+                  value: ${CORS_ALLOWED_ORIGINS}
+                - name: SPOTIFY_CLIENT_ID
+                  value: ${SPOTIFY_CLIENT_ID}
+                - name: SPOTIFY_REDIRECT_URI
+                  value: ${SPOTIFY_REDIRECT_URI}
+                - name: JWT_ISSUER
+                  value: ${JWT_ISSUER}
+                - name: JWT_AUDIENCE
+                  value: ${JWT_AUDIENCE}
+                - name: SPOTIFY_CLIENT_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: spotify-client-secret
+                      key: latest
+                # config.Load validates JWT_SECRET for every command, so the
+                # sync job must receive it even though it never issues tokens.
+                - name: JWT_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: jwt-secret
+                      key: latest
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: database-url
+                      key: latest
+                - name: TOKEN_ENCRYPTION_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: token-encryption-key
+                      key: latest
