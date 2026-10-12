@@ -1,0 +1,62 @@
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-primary);
+}
+
+.brand-mark__symbol {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: #9cad9d;
+  background: rgba(140, 160, 143, 0.08);
+  border: 1px solid rgba(156, 173, 157, 0.18);
+  border-radius: 12px;
+}
+
+.brand-mark__symbol svg {
+  width: 27px;
+  height: 27px;
+  overflow: visible;
+}
+
+.brand-mark__symbol path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.brand-mark__symbol circle {
+  fill: currentColor;
+}
+
+.brand-mark__word {
+  font-size: 1.08rem;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+
+.brand-mark--compact {
+  gap: 9px;
+}
+
+.brand-mark--compact .brand-mark__symbol {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+}
+
+.brand-mark--compact .brand-mark__symbol svg {
+  width: 21px;
+  height: 21px;
+}
+
+.brand-mark--compact .brand-mark__word {
+  font-size: 0.98rem;
+}

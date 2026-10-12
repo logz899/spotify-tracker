@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HashRouter } from "react-router-dom";
 import Login from "./Login";
@@ -30,10 +30,53 @@ function renderLogin(hash = "#/") {
 }
 
 async function submitLogin() {
+  if (!screen.queryByLabelText(/username/i)) {
+    await userEvent.click(screen.getByRole("button", { name: /^log in$/i }));
+  }
   await userEvent.type(screen.getByLabelText(/username/i), "listener");
   await userEvent.type(screen.getByLabelText(/password/i), "long-password");
-  await userEvent.click(screen.getByRole("button", { name: /^log in$/i }));
+  await userEvent.click(screen.getByRole("button", { name: /^log in to account$/i }));
 }
+
+test("presents a restrained landing screen before opening the login panel", () => {
+  renderLogin();
+
+  expect(screen.getByText("Spotify Tracker")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /music, in order/i })).toBeInTheDocument();
+  expect(screen.queryByText(/your listening/i)).not.toBeInTheDocument();
+  expect(screen.queryByRole("dialog", { name: /welcome back/i })).not.toBeInTheDocument();
+});
+
+test("plays the exit state before removing the login panel", async () => {
+  jest.useFakeTimers();
+  renderLogin();
+
+  fireEvent.click(screen.getByRole("button", { name: /^log in$/i }));
+
+  const dialog = screen.getByRole("dialog", { name: /welcome back/i });
+  expect(screen.getByRole("heading", { name: /welcome back/i })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: /close login/i }));
+
+  expect(dialog).toBeInTheDocument();
+  expect(dialog.closest(".login-overlay")).toHaveClass("login-overlay--closing");
+
+  act(() => jest.runOnlyPendingTimers());
+  expect(screen.queryByRole("dialog", { name: /welcome back/i })).not.toBeInTheDocument();
+  jest.useRealTimers();
+});
+
+test("closes the login panel with the Escape key", async () => {
+  renderLogin();
+
+  await userEvent.click(screen.getByRole("button", { name: /^log in$/i }));
+  expect(screen.getByRole("dialog", { name: /welcome back/i })).toBeInTheDocument();
+
+  await userEvent.keyboard("{Escape}");
+  await waitFor(() => {
+    expect(screen.queryByRole("dialog", { name: /welcome back/i })).not.toBeInTheDocument();
+  });
+});
 
 test("stores a normal login in the tab session and navigates home", async () => {
   login.mockResolvedValue({ token: "jwt-token", user: { username: "listener" } });

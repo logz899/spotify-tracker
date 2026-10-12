@@ -36,29 +36,8 @@
   flex-shrink: 0;
 }
 
-.home-logo-mark {
-  width: 34px;
-  height: 34px;
-  background: var(--green);
-  border-radius: var(--radius-pill);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.home-logo-mark svg {
-  width: 18px;
-  height: 18px;
-  fill: #000;
-}
-
-.home-title {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.01em;
-  white-space: nowrap;
+.home-brand .brand-mark__symbol {
+  box-shadow: none;
 }
 
 .home-header-right {

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HashRouter } from "react-router-dom";
 import Register from "./Register";
@@ -35,6 +35,50 @@ async function fillRegistration(password = "long-password", confirmation = passw
   await userEvent.type(screen.getByLabelText(/confirm password/i), confirmation);
   await userEvent.click(screen.getByRole("button", { name: /create account/i }));
 }
+
+test("uses the Spotify Tracker brand", () => {
+  renderRegister();
+
+  expect(screen.getByText("Spotify Tracker")).toBeInTheDocument();
+});
+
+test("plays the exit state before returning to the landing screen", () => {
+  jest.useFakeTimers();
+  renderRegister();
+
+  fireEvent.click(screen.getByRole("button", { name: /back to log in/i }));
+
+  const dialog = screen.getByRole("dialog", { name: /create account/i });
+  expect(dialog).toBeInTheDocument();
+  expect(dialog.closest(".register-overlay")).toHaveClass("register-overlay--closing");
+
+  act(() => jest.runOnlyPendingTimers());
+  expect(window.location.hash).toBe("#/");
+  jest.useRealTimers();
+});
+
+test("keeps the landing story visible behind the registration panel", () => {
+  renderRegister();
+
+  expect(screen.getByText(/music,/i)).toBeInTheDocument();
+  expect(screen.getByRole("dialog", { name: /create account/i })).toBeInTheDocument();
+});
+
+test("closes registration when the backdrop is clicked", async () => {
+  renderRegister();
+
+  await userEvent.click(screen.getByRole("button", { name: /close registration backdrop/i }));
+
+  await waitFor(() => expect(window.location.hash).toBe("#/"));
+});
+
+test("closes registration with the Escape key", async () => {
+  renderRegister();
+
+  await userEvent.keyboard("{Escape}");
+
+  await waitFor(() => expect(window.location.hash).toBe("#/"));
+});
 
 test("stores a normal registration in the tab session and navigates home", async () => {
   register.mockResolvedValue({ token: "jwt-token", user: { username: "listener" } });

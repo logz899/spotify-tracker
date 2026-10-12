@@ -1,16 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { linkPendingSpotify, register } from "../services/api";
 import { setSession } from "../services/authSession";
 import * as pendingSpotify from "../services/pendingSpotify";
+import AuthBackdrop from "../Components/AuthBackdrop";
 import "./Register.css";
 
-/* Music note icon for brand logo — same mark used in Login */
-const MusicNoteIcon = () => (
-  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-  </svg>
-);
+const PANEL_EXIT_MS = 360;
 
 const Register = () => {
   const navigate = useNavigate();
@@ -24,11 +20,37 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [spotifyPending, setSpotifyPending] = useState(false);
   const [canContinue, setCanContinue] = useState(false);
+  const [panelClosing, setPanelClosing] = useState(false);
+  const closeTimer = useRef(null);
+
+  const closePanel = useCallback(() => {
+    if (panelClosing || closeTimer.current !== null) return;
+
+    setPanelClosing(true);
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    closeTimer.current = window.setTimeout(() => {
+      closeTimer.current = null;
+      navigate("/");
+    }, reducedMotion ? 0 : PANEL_EXIT_MS);
+  }, [navigate, panelClosing]);
+
+  useEffect(() => () => {
+    if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
+  }, []);
 
   useEffect(() => {
     pendingSpotify.captureFromLocation();
     setSpotifyPending(Boolean(pendingSpotify.get()));
   }, []);
+
+  useEffect(() => {
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") closePanel();
+    };
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [closePanel]);
 
   const handleChange = (e) => {
     setFormData({
@@ -88,19 +110,26 @@ const Register = () => {
   };
 
   return (
-    <div className="register-page">
-      <div className="register-card">
-        {/* Brand header */}
-        <div className="register-brand">
-          <div className="register-brand-logo" aria-hidden="true">
-            <MusicNoteIcon />
-          </div>
-          <h1 className="register-brand-title">Create account</h1>
-          <p className="register-brand-subtitle">Join Spotify Tracker today</p>
-        </div>
+    <main className="auth-page register-page">
+      <AuthBackdrop inactive onLogin={() => navigate("/")} onRegister={() => {}} />
 
-        <div className="register-body">
-          {/* Spotify pending notice */}
+      <div className={`register-overlay${panelClosing ? " register-overlay--closing" : ""}`}>
+        <button
+          className="register-overlay__backdrop"
+          type="button"
+          aria-label="Close registration backdrop"
+          onClick={closePanel}
+        />
+
+        <section className="register-panel" role="dialog" aria-modal="true" aria-labelledby="register-title">
+          <button className="register-panel__close" type="button" aria-label="Back to log in" onClick={closePanel}>
+            <span /><span />
+          </button>
+        <div className="register-card">
+          <div className="register-brand">
+            <h1 id="register-title">Create account</h1>
+          </div>
+
           {spotifyPending && (
             <div className="register-notice register-notice--success" role="status">
               <span className="register-notice-dot" aria-hidden="true" />
@@ -108,27 +137,21 @@ const Register = () => {
             </div>
           )}
 
-          {/* Error notice */}
           {error && (
             <div className="register-notice register-notice--error" role="alert">
               <span className="register-notice-dot" aria-hidden="true" />
-              {error}
+              <span>{error}</span>
               {canContinue && (
-                <button
-                  type="button"
-                  className="register-text-link"
-                  onClick={() => navigate("/home")}
-                >
+                <button type="button" className="register-text-link" onClick={() => navigate("/home")}>
                   Continue to Home
                 </button>
               )}
             </div>
           )}
 
-          {/* Registration form */}
           <form className="register-form" onSubmit={handleSubmit} noValidate>
-            <div className="register-form-field">
-              <label htmlFor="username">Username</label>
+            <label className="register-form-field">
+              <span>Username</span>
               <input
                 type="text"
                 id="username"
@@ -143,10 +166,10 @@ const Register = () => {
                 minLength={3}
                 maxLength={50}
               />
-            </div>
+            </label>
 
-            <div className="register-form-field">
-              <label htmlFor="email">Email</label>
+            <label className="register-form-field">
+              <span>Email</span>
               <input
                 type="email"
                 id="email"
@@ -157,10 +180,10 @@ const Register = () => {
                 autoComplete="email"
                 required
               />
-            </div>
+            </label>
 
-            <div className="register-form-field">
-              <label htmlFor="password">Password</label>
+            <label className="register-form-field">
+              <span>Password</span>
               <input
                 type="password"
                 id="password"
@@ -172,10 +195,10 @@ const Register = () => {
                 required
                 minLength={10}
               />
-            </div>
+            </label>
 
-            <div className="register-form-field">
-              <label htmlFor="confirmPassword">Confirm Password</label>
+            <label className="register-form-field">
+              <span>Confirm Password</span>
               <input
                 type="password"
                 id="confirmPassword"
@@ -186,32 +209,18 @@ const Register = () => {
                 autoComplete="new-password"
                 required
               />
-            </div>
+            </label>
 
-            <div className="register-submit-wrapper">
-              <button type="submit" className="register-btn" disabled={loading} aria-busy={loading}>
-                {loading ? (
-                  <>
-                    <span className="register-btn-spinner" aria-hidden="true" />
-                    Creating account...
-                  </>
-                ) : (
-                  "Create account"
-                )}
-              </button>
-            </div>
-          </form>
-
-          {/* Login link */}
-          <p className="register-footer">
-            Already have an account?{" "}
-            <button type="button" className="register-text-link" onClick={() => navigate("/")}>
-              Log in
+            <button type="submit" className="register-btn" disabled={loading} aria-busy={loading}>
+              <span>{loading ? "Creating account..." : "Create account"}</span>
+              {!loading && <span aria-hidden="true">↗</span>}
             </button>
-          </p>
+          </form>
         </div>
+        <p className="register-privacy">Your Spotify credentials stay with Spotify.</p>
+        </section>
       </div>
-    </div>
+    </main>
   );
 };
 

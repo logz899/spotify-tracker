@@ -3,17 +3,12 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { getRecentSongs, getAllSongs, getSpotifyAuthURL, logout } from "../services/api";
 import { clearSession, getToken, getUser } from "../services/authSession";
 import TimePeriodFilter from "../Components/TimePeriodFilter";
+import BrandMark from "../Components/BrandMark";
 import "./Home.css";
 
 /* ============================================
    Inline SVG Icons (no extra dependency)
    ============================================ */
-
-const MusicNoteIcon = () => (
-  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-  </svg>
-);
 
 const SpotifyMark = () => (
   <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -275,10 +270,7 @@ const Home = () => {
       {/* ---- Sticky header ---- */}
       <header className="home-header">
         <div className="home-header-left">
-          <div className="home-logo-mark" aria-hidden="true">
-            <MusicNoteIcon />
-          </div>
-          <span className="home-title">Spotify Tracker</span>
+          <BrandMark compact className="home-brand" />
         </div>
 
         <div className="home-header-right">
