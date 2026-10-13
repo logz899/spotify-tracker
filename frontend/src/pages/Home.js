@@ -250,7 +250,7 @@ const Home = () => {
           name: artistName,
           playCount: 0,
           songCount: 0,
-          imageUrl: song.image_url,
+          imageUrl: song.author_image_url || song.image_url,
         };
       }
       artistMap[artistName].playCount += song.song_count || 1;

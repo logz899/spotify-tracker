@@ -161,3 +161,24 @@ test("the header has no standalone greeting, Sync, Connect, or Logout controls",
   ).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /^log out$/i })).not.toBeInTheDocument();
 });
+
+test("artist rankings prefer the Spotify artist profile image", async () => {
+  getAllSongs.mockResolvedValue({
+    data: [
+      {
+        ...song,
+        image_url: "https://images.example/album.jpg",
+        author_image_url: "https://images.example/artist.jpg",
+      },
+    ],
+  });
+  renderHome();
+
+  await screen.findByText("First Song");
+  fireEvent.click(screen.getByRole("tab", { name: /artists/i }));
+
+  expect(screen.getByRole("img", { name: "First Artist" })).toHaveAttribute(
+    "src",
+    "https://images.example/artist.jpg"
+  );
+});

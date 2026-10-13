@@ -122,6 +122,7 @@ func (c *Client) GetRecentlyPlayed(ctx context.Context, token *oauth2.Token) ([]
 
 	// Use a composite key of song name + artist name to handle duplicate song names by different artists
 	songCount := make(map[string]*models.Song)
+	artistImages := make(map[spotify.ID]string)
 
 	for _, item := range recentlyPlayed {
 		track := item.Track
@@ -129,8 +130,10 @@ func (c *Client) GetRecentlyPlayed(ctx context.Context, token *oauth2.Token) ([]
 
 		// Get artist name (use first artist if multiple)
 		var artistName string
+		var artistID spotify.ID
 		if len(track.Artists) > 0 {
 			artistName = track.Artists[0].Name
+			artistID = track.Artists[0].ID
 		} else {
 			artistName = "Unknown Artist"
 		}
@@ -145,17 +148,34 @@ func (c *Client) GetRecentlyPlayed(ctx context.Context, token *oauth2.Token) ([]
 			imageURL = track.Album.Images[0].URL
 		}
 
+		artistImageURL := imageURL
+		if artistID != "" {
+			cachedImageURL, cached := artistImages[artistID]
+			if !cached {
+				artist, artistErr := client.GetArtist(ctx, artistID)
+				if artistErr != nil {
+					log.Printf("Could not load Spotify image for artist %q; using album artwork", artistName)
+					cachedImageURL = imageURL
+				} else {
+					cachedImageURL = selectImageURL(artist.Images, imageURL)
+				}
+				artistImages[artistID] = cachedImageURL
+			}
+			artistImageURL = cachedImageURL
+		}
+
 		// Use composite key to differentiate songs with same name by different artists
 		compositeKey := fmt.Sprintf("%s|%s", songName, artistName)
 
 		if _, exists := songCount[compositeKey]; !exists {
 			songCount[compositeKey] = &models.Song{
-				SongName:      songName,
-				AuthorName:    artistName,
-				AlbumName:     albumName,
-				ImageURL:      imageURL,
-				SongCount:     0,
-				ListeningDate: item.PlayedAt,
+				SongName:       songName,
+				AuthorName:     artistName,
+				AuthorImageURL: artistImageURL,
+				AlbumName:      albumName,
+				ImageURL:       imageURL,
+				SongCount:      0,
+				ListeningDate:  item.PlayedAt,
 			}
 		} else {
 			songCount[compositeKey].SongCount++
@@ -178,4 +198,11 @@ func (c *Client) GetRecentlyPlayed(ctx context.Context, token *oauth2.Token) ([]
 	log.Printf("Processed %d unique songs from %d recently played tracks", len(songs), len(recentlyPlayed))
 
 	return songs, nil
+}
+
+func selectImageURL(images []spotify.Image, fallback string) string {
+	if len(images) == 0 {
+		return fallback
+	}
+	return images[0].URL
 }

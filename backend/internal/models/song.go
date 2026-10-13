@@ -4,15 +4,16 @@ import "time"
 
 // Song represents a song with its play count and album cover
 type Song struct {
-	ID            int       `json:"id"`
-	SongID        int       `json:"song_id"`
-	SongName      string    `json:"song_name"`
-	ImageURL      string    `json:"image_url"`
-	SongCount     int       `json:"song_count"`
-	AuthorID      int       `json:"author_id"`
-	AuthorName    string    `json:"author_name,omitempty"`
-	AlbumName     string    `json:"album_name,omitempty"`
-	ListeningDate time.Time `json:"listening_date"`
+	ID             int       `json:"id"`
+	SongID         int       `json:"song_id"`
+	SongName       string    `json:"song_name"`
+	ImageURL       string    `json:"image_url"`
+	SongCount      int       `json:"song_count"`
+	AuthorID       int       `json:"author_id"`
+	AuthorName     string    `json:"author_name,omitempty"`
+	AuthorImageURL string    `json:"author_image_url,omitempty"`
+	AlbumName      string    `json:"album_name,omitempty"`
+	ListeningDate  time.Time `json:"listening_date"`
 }
 
 // SongList is a slice of songs

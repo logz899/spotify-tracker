@@ -11,6 +11,7 @@ import (
 
 	"spotify-backend/internal/models"
 
+	spotifyapi "github.com/zmb3/spotify/v2"
 	"golang.org/x/oauth2"
 )
 
@@ -118,6 +119,24 @@ func TestGetCurrentUserProfileHidesUpstreamDetails(t *testing.T) {
 			t.Fatalf("error %q contains sensitive value %q", err, secret)
 		}
 	}
+}
+
+func TestSelectImageURL(t *testing.T) {
+	t.Run("uses Spotify artist image", func(t *testing.T) {
+		images := []spotifyapi.Image{{URL: "https://images.example/artist.jpg"}}
+
+		if got := selectImageURL(images, "https://images.example/album.jpg"); got != images[0].URL {
+			t.Fatalf("selectImageURL() = %q, want artist image", got)
+		}
+	})
+
+	t.Run("falls back to album image", func(t *testing.T) {
+		const fallback = "https://images.example/album.jpg"
+
+		if got := selectImageURL(nil, fallback); got != fallback {
+			t.Fatalf("selectImageURL() = %q, want %q", got, fallback)
+		}
+	})
 }
 
 func newProfileTestClient(profileURL string) *Client {

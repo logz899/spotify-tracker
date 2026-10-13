@@ -49,12 +49,16 @@ func (db *DB) InsertSongs(ctx context.Context, userID int, songs []models.Song) 
 
 	for _, song := range songs {
 		// Insert/get author
+		authorImageURL := song.AuthorImageURL
+		if authorImageURL == "" {
+			authorImageURL = song.ImageURL
+		}
 		var authorID int
 		authorQuery := `INSERT INTO author (author_name, image_url)
 		                VALUES ($1, $2)
-		                ON CONFLICT (author_name) DO UPDATE SET author_name = EXCLUDED.author_name
+		                ON CONFLICT (author_name) DO UPDATE SET image_url = EXCLUDED.image_url
 		                RETURNING id`
-		err := tx.QueryRow(ctx, authorQuery, song.AuthorName, song.ImageURL).Scan(&authorID)
+		err := tx.QueryRow(ctx, authorQuery, song.AuthorName, authorImageURL).Scan(&authorID)
 		if err != nil {
 			return fmt.Errorf("failed to insert/get author '%s': %w", song.AuthorName, err)
 		}
@@ -112,6 +116,7 @@ func (db *DB) GetAllSongs(ctx context.Context, userID int) ([]models.Song, error
 	              s.image_url,
 	              a.id,
 	              a.author_name,
+	              a.image_url,
 	              COALESCE(alb.album_name, ''),
 	              COUNT(*) as song_count,
 	              MAX(lh.listening_date) as listening_date
@@ -120,7 +125,7 @@ func (db *DB) GetAllSongs(ctx context.Context, userID int) ([]models.Song, error
 	          INNER JOIN author a ON lh.author_id = a.id
 	          LEFT JOIN albums alb ON s.album_id = alb.id
 	          WHERE lh.user_id = $1
-	          GROUP BY s.id, s.song_name, s.image_url, a.id, a.author_name, alb.album_name
+	          GROUP BY s.id, s.song_name, s.image_url, a.id, a.author_name, a.image_url, alb.album_name
 	          ORDER BY song_count DESC, listening_date DESC`
 
 	rows, err := db.pool.Query(ctx, query, userID)
@@ -132,7 +137,7 @@ func (db *DB) GetAllSongs(ctx context.Context, userID int) ([]models.Song, error
 	var songs []models.Song
 	for rows.Next() {
 		var song models.Song
-		if err := rows.Scan(&song.SongID, &song.SongName, &song.ImageURL, &song.AuthorID, &song.AuthorName, &song.AlbumName, &song.SongCount, &song.ListeningDate); err != nil {
+		if err := rows.Scan(&song.SongID, &song.SongName, &song.ImageURL, &song.AuthorID, &song.AuthorName, &song.AuthorImageURL, &song.AlbumName, &song.SongCount, &song.ListeningDate); err != nil {
 			return nil, fmt.Errorf("failed to scan song: %w", err)
 		}
 		songs = append(songs, song)
