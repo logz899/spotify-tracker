@@ -17,28 +17,30 @@ import (
 )
 
 type Handler struct {
-	db            *database.DB
-	spotifyClient *spotify.Client
-	cfg           *config.Config
-	jwtManager    *auth.Manager
-	authStore     AuthStore
-	oauthStore    OAuthStore
-	oauthClient   SpotifyOAuthClient
-	songStore     SongStore
-	now           func() time.Time
+	cfg               *config.Config
+	jwtManager        *auth.Manager
+	authStore         AuthStore
+	oauthStore        OAuthStore
+	oauthClient       SpotifyOAuthClient
+	songStore         SongStore
+	profileStore      ProfileStore
+	manualSyncStore   ManualSyncStore
+	spotifySongClient SpotifySongClient
+	now               func() time.Time
 }
 
 func New(db *database.DB, spotifyClient *spotify.Client, cfg *config.Config, jwtManager *auth.Manager) *Handler {
 	return &Handler{
-		db:            db,
-		spotifyClient: spotifyClient,
-		cfg:           cfg,
-		jwtManager:    jwtManager,
-		authStore:     db,
-		oauthStore:    db,
-		oauthClient:   spotifyClient,
-		songStore:     db,
-		now:           time.Now,
+		cfg:               cfg,
+		jwtManager:        jwtManager,
+		authStore:         db,
+		oauthStore:        db,
+		oauthClient:       spotifyClient,
+		songStore:         db,
+		profileStore:      db,
+		manualSyncStore:   db,
+		spotifySongClient: spotifyClient,
+		now:               time.Now,
 	}
 }
 
@@ -51,7 +53,7 @@ func (h *Handler) GetRecentSongs(c *gin.Context) {
 	}
 	userIDInt := userID.(int)
 
-	spotifyToken, err := h.db.GetSpotifyToken(ctx, userIDInt)
+	spotifyToken, err := h.manualSyncStore.GetSpotifyToken(ctx, userIDInt)
 	if err != nil {
 		log.Printf("No Spotify token found for user %d", userIDInt)
 		c.JSON(http.StatusOK, gin.H{"message": []models.Song{}, "notice": "Please connect your Spotify account first"})
@@ -61,15 +63,28 @@ func (h *Handler) GetRecentSongs(c *gin.Context) {
 		AccessToken: spotifyToken.AccessToken, RefreshToken: spotifyToken.RefreshToken,
 		TokenType: spotifyToken.TokenType, Expiry: spotifyToken.Expiry,
 	}
-	songs, err := h.spotifyClient.GetRecentlyPlayed(ctx, oauthToken)
+	if err := h.manualSyncStore.UpdateUserSyncStatus(ctx, userIDInt, "syncing"); err != nil {
+		log.Printf("Unable to start Spotify sync for user %d", userIDInt)
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Sync is temporarily unavailable"})
+		return
+	}
+	songs, err := h.spotifySongClient.GetRecentlyPlayed(ctx, oauthToken)
 	if err != nil {
+		_ = h.manualSyncStore.UpdateUserSyncStatus(ctx, userIDInt, "failed")
 		log.Printf("Spotify recently-played request failed for user %d", userIDInt)
 		c.JSON(http.StatusBadGateway, gin.H{"error": "Failed to fetch songs from Spotify"})
 		return
 	}
-	if err := h.db.InsertSongs(ctx, userIDInt, songs); err != nil {
+	if err := h.manualSyncStore.InsertSongs(ctx, userIDInt, songs); err != nil {
+		_ = h.manualSyncStore.UpdateUserSyncStatus(ctx, userIDInt, "failed")
 		log.Printf("Song persistence failed for user %d", userIDInt)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save songs to database"})
+		return
+	}
+	if err := h.manualSyncStore.UpdateUserSyncStatus(ctx, userIDInt, "completed"); err != nil {
+		_ = h.manualSyncStore.UpdateUserSyncStatus(ctx, userIDInt, "failed")
+		log.Printf("Unable to complete Spotify sync for user %d", userIDInt)
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Sync is temporarily unavailable"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": songs})

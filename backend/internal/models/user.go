@@ -14,16 +14,29 @@ type User struct {
 	UpdateDate   *time.Time `json:"update_date,omitempty"` // Pointer because it can be NULL
 }
 
+// UserProfile contains only the application and Spotify display data needed by
+// the authenticated account menu.
+type UserProfile struct {
+	UserID             int
+	Username           string
+	UpdateStatus       string
+	UpdateDate         *time.Time
+	SpotifyLinked      bool
+	SpotifyDisplayName string
+	SpotifyAvatarURL   string
+	SpotifyProfileURL  string
+}
+
 // UserRegistration represents registration request
 type UserRegistration struct {
 	Username string `json:"username" binding:"required,min=3,max=50"`
-	Email    string `json:"email" binding:"required,email"`
+	Email    string `json:"email" binding:"required"`
 	Password string `json:"password" binding:"required,min=10"`
 }
 
 // UserLogin represents login request
 type UserLogin struct {
-	Username string `json:"username" binding:"required"`
+	Email    string `json:"email" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
 

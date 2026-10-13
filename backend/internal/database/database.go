@@ -174,9 +174,23 @@ func (db *DB) GetUserByUsername(ctx context.Context, username string) (*models.U
 	return user, nil
 }
 
+func (db *DB) GetUserByID(ctx context.Context, userID int) (*models.User, error) {
+	query := `SELECT id, username, email, password_hash, created_at, updated_at
+	          FROM users WHERE id = $1`
+
+	user := &models.User{}
+	err := db.pool.QueryRow(ctx, query, userID).
+		Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	return user, nil
+}
+
 func (db *DB) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	query := `SELECT id, username, email, password_hash, created_at, updated_at
-	          FROM users WHERE email = $1`
+	          FROM users WHERE lower(email) = lower($1)`
 
 	user := &models.User{}
 	err := db.pool.QueryRow(ctx, query, email).
@@ -186,6 +200,36 @@ func (db *DB) GetUserByEmail(ctx context.Context, email string) (*models.User, e
 	}
 
 	return user, nil
+}
+
+func (db *DB) GetUserProfile(ctx context.Context, userID int) (*models.UserProfile, error) {
+	profile := &models.UserProfile{}
+	err := db.pool.QueryRow(ctx,
+		`SELECT u.id,
+		        u.username,
+		        COALESCE(u.update_status, ''),
+		        u.update_date,
+		        sa.user_id IS NOT NULL,
+		        COALESCE(sa.display_name, ''),
+		        COALESCE(sa.avatar_url, ''),
+		        COALESCE(sa.profile_url, '')
+		 FROM users u
+		 LEFT JOIN spotify_accounts sa ON sa.user_id = u.id
+		 WHERE u.id = $1`, userID,
+	).Scan(
+		&profile.UserID,
+		&profile.Username,
+		&profile.UpdateStatus,
+		&profile.UpdateDate,
+		&profile.SpotifyLinked,
+		&profile.SpotifyDisplayName,
+		&profile.SpotifyAvatarURL,
+		&profile.SpotifyProfileURL,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get user profile: %w", err)
+	}
+	return profile, nil
 }
 
 func (db *DB) GetAllUsersWithSpotifyTokens(ctx context.Context) ([]models.User, error) {

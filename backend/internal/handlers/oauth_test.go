@@ -104,14 +104,17 @@ func TestSpotifyCallbackUsesStoredUserAndMapsSpotifyFailure(t *testing.T) {
 
 	t.Run("stored user cannot be reassigned by request context", func(t *testing.T) {
 		store := &fakeOAuthStore{consumeStateUserID: intPointer(17)}
-		client := &fakeSpotifyOAuthClient{token: testOAuthToken(now)}
+		client := &fakeSpotifyOAuthClient{token: testOAuthToken(now), profile: testSpotifyProfile()}
 		handler := newOAuthTestHandler(store, client, now)
 		response := performHandlerRequest(http.MethodGet, "/callback?code=code&state="+state, "", intPointer(99), handler.SpotifyCallback)
 		if response.Code != http.StatusTemporaryRedirect {
 			t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
 		}
-		if store.savedToken == nil || store.savedToken.UserID != 17 {
-			t.Fatalf("saved user = %v, want state-bound user 17", store.savedToken)
+		if store.linkedUserID != 17 {
+			t.Fatalf("linked user = %d, want state-bound user 17", store.linkedUserID)
+		}
+		if store.linkedAuthorization.Profile != testSpotifyProfile() {
+			t.Fatalf("linked Spotify profile = %#v", store.linkedAuthorization.Profile)
 		}
 		if got := response.Header().Get("Location"); got != "http://localhost:3000/#/home?spotify_linked=true" {
 			t.Fatalf("Location = %q", got)
@@ -145,15 +148,15 @@ func TestSpotifyCallbackGuestCreatesPendingFragmentKey(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	now := time.Unix(1_700_000_000, 0).UTC()
 	state, _, _ := security.NewOpaqueToken()
-	store := &fakeOAuthStore{}
-	client := &fakeSpotifyOAuthClient{token: testOAuthToken(now)}
+	store := &fakeOAuthStore{completeLinkedErr: database.ErrSpotifyAccountNotLinked}
+	client := &fakeSpotifyOAuthClient{token: testOAuthToken(now), profile: testSpotifyProfile()}
 	response := performHandlerRequest(http.MethodGet, "/callback?code=code&state="+state, "", nil, newOAuthTestHandler(store, client, now).SpotifyCallback)
 
 	if response.Code != http.StatusTemporaryRedirect {
 		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
 	}
 	location := response.Header().Get("Location")
-	const prefix = "http://localhost:3000/#/?spotify_connected=true&key="
+	const prefix = "http://localhost:3000/#/register?spotify_connected=true&key="
 	if !strings.HasPrefix(location, prefix) {
 		t.Fatalf("Location = %q, want fragment prefix %q", location, prefix)
 	}
@@ -167,6 +170,167 @@ func TestSpotifyCallbackGuestCreatesPendingFragmentKey(t *testing.T) {
 	}
 	if store.createdPendingExpiry != now.Add(10*time.Minute) {
 		t.Fatalf("pending expiry = %s", store.createdPendingExpiry)
+	}
+	if store.createdPendingAuthorization.Profile != testSpotifyProfile() {
+		t.Fatalf("pending Spotify profile = %#v", store.createdPendingAuthorization.Profile)
+	}
+}
+
+func TestSpotifyCallbackLinkedGuestCreatesTwoMinuteLoginTicket(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	now := time.Unix(1_700_000_000, 0).UTC()
+	state, _, _ := security.NewOpaqueToken()
+	store := &fakeOAuthStore{}
+	client := &fakeSpotifyOAuthClient{token: testOAuthToken(now), profile: testSpotifyProfile()}
+
+	response := performHandlerRequest(http.MethodGet, "/callback?code=code&state="+state, "", nil, newOAuthTestHandler(store, client, now).SpotifyCallback)
+
+	if response.Code != http.StatusTemporaryRedirect {
+		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+	}
+	const prefix = "http://localhost:3000/#/?spotify_login=true&ticket="
+	location := response.Header().Get("Location")
+	if !strings.HasPrefix(location, prefix) {
+		t.Fatalf("Location = %q, want prefix %q", location, prefix)
+	}
+	rawTicket := strings.TrimPrefix(location, prefix)
+	if err := security.ValidateOpaqueToken(rawTicket); err != nil {
+		t.Fatalf("login ticket is invalid: %v", err)
+	}
+	hash := security.HashOpaqueToken(rawTicket)
+	if string(store.completedTicketHash) != string(hash[:]) {
+		t.Fatal("stored ticket hash does not match redirect ticket")
+	}
+	if store.completedTicketExpiry != now.Add(2*time.Minute) {
+		t.Fatalf("ticket expiry = %s, want %s", store.completedTicketExpiry, now.Add(2*time.Minute))
+	}
+	if store.completedAuthorization.Profile != testSpotifyProfile() {
+		t.Fatalf("Spotify profile = %#v", store.completedAuthorization.Profile)
+	}
+	if strings.Contains(location, "token=") {
+		t.Fatalf("redirect exposed an application or Spotify token: %q", location)
+	}
+}
+
+func TestSpotifyCallbackRejectsMissingAccountID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	now := time.Unix(1_700_000_000, 0).UTC()
+	state, _, _ := security.NewOpaqueToken()
+
+	for _, tt := range []struct {
+		name       string
+		profile    models.SpotifyProfile
+		profileErr error
+	}{
+		{name: "profile failure", profileErr: errors.New("Spotify unavailable")},
+		{name: "empty account ID", profile: models.SpotifyProfile{LegacyUserID: "legacy-only"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			store := &fakeOAuthStore{}
+			client := &fakeSpotifyOAuthClient{token: testOAuthToken(now), profile: tt.profile, profileErr: tt.profileErr}
+			response := performHandlerRequest(http.MethodGet, "/callback?code=code&state="+state, "", nil, newOAuthTestHandler(store, client, now).SpotifyCallback)
+
+			if response.Code != http.StatusBadGateway {
+				t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+			}
+			if store.createPendingCalls != 0 || store.completeLinkedCalls != 0 || store.linkCalls != 0 {
+				t.Fatal("storage was reached after an invalid Spotify profile")
+			}
+		})
+	}
+}
+
+func TestSpotifyCallbackAccountConflictIsGeneric(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	now := time.Unix(1_700_000_000, 0).UTC()
+	state, _, _ := security.NewOpaqueToken()
+	store := &fakeOAuthStore{consumeStateUserID: intPointer(17), linkErr: database.ErrSpotifyAccountConflict}
+	client := &fakeSpotifyOAuthClient{token: testOAuthToken(now), profile: testSpotifyProfile()}
+
+	response := performHandlerRequest(http.MethodGet, "/callback?code=code&state="+state, "", nil, newOAuthTestHandler(store, client, now).SpotifyCallback)
+
+	if response.Code != http.StatusConflict {
+		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+	}
+	if strings.Contains(response.Body.String(), testSpotifyProfile().AccountID) {
+		t.Fatal("response exposed Spotify identity")
+	}
+}
+
+func TestSpotifyCallbackPassesCompleteProfile(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	now := time.Unix(1_700_000_000, 0).UTC()
+	profile := testSpotifyProfile()
+
+	for _, tt := range []struct {
+		name          string
+		storedUserID  *int
+		completeError error
+		stored        func(*fakeOAuthStore) models.SpotifyAuthorization
+	}{
+		{name: "authenticated link", storedUserID: intPointer(17), stored: func(store *fakeOAuthStore) models.SpotifyAuthorization { return store.linkedAuthorization }},
+		{name: "linked guest", stored: func(store *fakeOAuthStore) models.SpotifyAuthorization { return store.completedAuthorization }},
+		{name: "unlinked guest", completeError: database.ErrSpotifyAccountNotLinked, stored: func(store *fakeOAuthStore) models.SpotifyAuthorization { return store.createdPendingAuthorization }},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			state, _, _ := security.NewOpaqueToken()
+			store := &fakeOAuthStore{consumeStateUserID: tt.storedUserID, completeLinkedErr: tt.completeError}
+			client := &fakeSpotifyOAuthClient{token: testOAuthToken(now), profile: profile}
+			response := performHandlerRequest(http.MethodGet, "/callback?code=code&state="+state, "", nil, newOAuthTestHandler(store, client, now).SpotifyCallback)
+			if response.Code != http.StatusTemporaryRedirect {
+				t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+			}
+			if got := tt.stored(store); got.Profile != profile || got.Token.AccessToken != "access" || got.Token.RefreshToken != "refresh" {
+				t.Fatalf("stored authorization = %#v, want complete profile and token", got)
+			}
+		})
+	}
+}
+
+func TestSpotifyCallbackRedirectContainsOnlyOpaqueValues(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	now := time.Unix(1_700_000_000, 0).UTC()
+	state, _, _ := security.NewOpaqueToken()
+	profile := testSpotifyProfile()
+	store := &fakeOAuthStore{completeLinkedErr: database.ErrSpotifyAccountNotLinked}
+	client := &fakeSpotifyOAuthClient{token: testOAuthToken(now), profile: profile}
+	response := performHandlerRequest(http.MethodGet, "/callback?code=code&state="+state, "", nil, newOAuthTestHandler(store, client, now).SpotifyCallback)
+
+	location := response.Header().Get("Location")
+	for _, privateValue := range []string{profile.AccountID, profile.LegacyUserID, profile.DisplayName, profile.AvatarURL, profile.ProfileURL, "access", "refresh"} {
+		if strings.Contains(location, privateValue) {
+			t.Fatalf("redirect %q exposed private value %q", location, privateValue)
+		}
+	}
+}
+
+func TestSpotifySessionTicketReturnsJWTOnceAndRejectsReplay(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	now := time.Unix(1_700_000_000, 0).UTC()
+	rawTicket, _, _ := security.NewOpaqueToken()
+	store := &fakeOAuthStore{ticketUserID: 23}
+	authStore := &fakeAuthStore{idUser: &models.User{ID: 23, Username: "listener", Email: "listener@example.test"}}
+	handler := newOAuthTestHandler(store, &fakeSpotifyOAuthClient{}, now)
+	handler.authStore = authStore
+	handler.jwtManager = newTestJWTManager(t)
+	body := `{"ticket":"` + rawTicket + `"}`
+
+	first := performHandlerRequest(http.MethodPost, "/session", body, nil, handler.ExchangeSpotifySession)
+	if first.Code != http.StatusOK {
+		t.Fatalf("first status = %d, body = %s", first.Code, first.Body.String())
+	}
+	firstBody := decodeJSONBody(t, first)
+	if token, ok := firstBody["token"].(string); !ok || token == "" {
+		t.Fatalf("token = %#v, want signed JWT", firstBody["token"])
+	}
+
+	store.consumeTicketErr = database.ErrSpotifyLoginTicketInvalid
+	replay := performHandlerRequest(http.MethodPost, "/session", body, nil, handler.ExchangeSpotifySession)
+	if replay.Code != http.StatusBadRequest {
+		t.Fatalf("replay status = %d, body = %s", replay.Code, replay.Body.String())
+	}
+	if got := decodeJSONBody(t, replay)["error"]; got != "Invalid Spotify login session" {
+		t.Fatalf("replay error = %#v, want generic error", got)
 	}
 }
 
@@ -219,6 +383,16 @@ func testOAuthToken(now time.Time) *oauth2.Token {
 	return &oauth2.Token{AccessToken: "access", RefreshToken: "refresh", TokenType: "Bearer", Expiry: now.Add(time.Hour)}
 }
 
+func testSpotifyProfile() models.SpotifyProfile {
+	return models.SpotifyProfile{
+		AccountID:    "stable-account-id",
+		LegacyUserID: "legacy-user-id",
+		DisplayName:  "Listener",
+		AvatarURL:    "https://i.scdn.co/image/listener",
+		ProfileURL:   "https://open.spotify.com/user/listener",
+	}
+}
+
 func intPointer(value int) *int { return &value }
 
 func equalOptionalInt(first, second *int) bool {
@@ -233,6 +407,14 @@ type fakeSpotifyOAuthClient struct {
 	token         *oauth2.Token
 	exchangeErr   error
 	exchangeCalls int
+	profile       models.SpotifyProfile
+	profileErr    error
+	profileCalls  int
+}
+
+func (f *fakeSpotifyOAuthClient) GetCurrentUserProfile(_ context.Context, _ *oauth2.Token) (models.SpotifyProfile, error) {
+	f.profileCalls++
+	return f.profile, f.profileErr
 }
 
 func (f *fakeSpotifyOAuthClient) GetAuthURL(state string) string {
@@ -246,19 +428,32 @@ func (f *fakeSpotifyOAuthClient) GetToken(_ context.Context, _ string) (*oauth2.
 }
 
 type fakeOAuthStore struct {
-	createdStateHash     []byte
-	createdStateUserID   *int
-	createdStateExpiry   time.Time
-	createStateErr       error
-	consumeStateUserID   *int
-	consumeStateErr      error
-	createdPendingHash   []byte
-	createdPendingToken  models.SpotifyToken
-	createdPendingExpiry time.Time
-	consumePendingUserID int
-	consumePendingErr    error
-	savedToken           *models.SpotifyToken
-	cleanupCalls         int
+	createdStateHash            []byte
+	createdStateUserID          *int
+	createdStateExpiry          time.Time
+	createStateErr              error
+	consumeStateUserID          *int
+	consumeStateErr             error
+	createdPendingHash          []byte
+	createdPendingToken         models.SpotifyToken
+	createdPendingAuthorization models.SpotifyAuthorization
+	createdPendingExpiry        time.Time
+	createPendingCalls          int
+	consumePendingUserID        int
+	consumePendingErr           error
+	savedToken                  *models.SpotifyToken
+	linkedUserID                int
+	linkedAuthorization         models.SpotifyAuthorization
+	linkErr                     error
+	linkCalls                   int
+	completedAuthorization      models.SpotifyAuthorization
+	completedTicketHash         []byte
+	completedTicketExpiry       time.Time
+	completeLinkedErr           error
+	completeLinkedCalls         int
+	ticketUserID                int
+	consumeTicketErr            error
+	cleanupCalls                int
 }
 
 func (f *fakeOAuthStore) CreateOAuthState(_ context.Context, hash []byte, userID *int, expiresAt time.Time) error {
@@ -281,9 +476,41 @@ func (f *fakeOAuthStore) CreatePendingSpotifyToken(_ context.Context, hash []byt
 	return nil
 }
 
+func (f *fakeOAuthStore) CreatePendingSpotifyAuthorization(_ context.Context, hash []byte, authorization models.SpotifyAuthorization, expiresAt time.Time) error {
+	f.createPendingCalls++
+	f.createdPendingHash = append([]byte(nil), hash...)
+	f.createdPendingAuthorization = authorization
+	f.createdPendingExpiry = expiresAt
+	return nil
+}
+
 func (f *fakeOAuthStore) ConsumePendingSpotifyToken(_ context.Context, _ []byte, userID int, _ time.Time) error {
 	f.consumePendingUserID = userID
 	return f.consumePendingErr
+}
+
+func (f *fakeOAuthStore) ConsumePendingSpotifyAuthorization(_ context.Context, _ []byte, userID int, _ time.Time) error {
+	f.consumePendingUserID = userID
+	return f.consumePendingErr
+}
+
+func (f *fakeOAuthStore) LinkSpotifyAccount(_ context.Context, userID int, authorization models.SpotifyAuthorization) error {
+	f.linkCalls++
+	f.linkedUserID = userID
+	f.linkedAuthorization = authorization
+	return f.linkErr
+}
+
+func (f *fakeOAuthStore) CompleteLinkedSpotifyLogin(_ context.Context, authorization models.SpotifyAuthorization, ticketHash []byte, expiresAt time.Time) error {
+	f.completeLinkedCalls++
+	f.completedAuthorization = authorization
+	f.completedTicketHash = append([]byte(nil), ticketHash...)
+	f.completedTicketExpiry = expiresAt
+	return f.completeLinkedErr
+}
+
+func (f *fakeOAuthStore) ConsumeSpotifyLoginTicket(_ context.Context, _ []byte, _ time.Time) (int, error) {
+	return f.ticketUserID, f.consumeTicketErr
 }
 
 func (f *fakeOAuthStore) SaveSpotifyToken(_ context.Context, token *models.SpotifyToken) error {

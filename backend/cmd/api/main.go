@@ -86,6 +86,7 @@ func main() {
 		{
 			authRoutes.POST("/register", h.Register)
 			authRoutes.POST("/login", h.Login)
+			authRoutes.POST("/spotify/session", h.ExchangeSpotifySession)
 
 			// Spotify OAuth routes (with optional auth)
 			authRoutes.GET("/spotify/login", middleware.OptionalAuth(jwtManager), h.SpotifyLogin)
