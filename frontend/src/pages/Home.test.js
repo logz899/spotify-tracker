@@ -66,10 +66,8 @@ beforeEach(() => {
 test("profile and songs load independently on mount", async () => {
   renderHome();
 
-  await waitFor(() => {
-    expect(getCurrentUser).toHaveBeenCalledTimes(1);
-    expect(getAllSongs).toHaveBeenCalledTimes(1);
-  });
+  await waitFor(() => expect(getCurrentUser).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(getAllSongs).toHaveBeenCalledTimes(1));
   expect(await screen.findByText("First Song")).toBeInTheDocument();
   expect(screen.getByRole("img", { name: /listener name/i })).toBeInTheDocument();
 });
