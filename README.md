@@ -17,6 +17,8 @@
   * Connect the server and get data.
   * Display the data on the website.
   * Data display with different time intervals.
+  * Use one accessible profile menu for Spotify connection state, manual sync,
+    Spotify profile access, and logout.
 
 ![image](https://github.com/LinChiaWei/spotify_project/assets/62389828/16ce624d-34a9-4629-a7f8-3e072f43e92f)
 
@@ -31,6 +33,32 @@
   keeps only the 3 newest images, and a US$1 budget alerts at 50/90/100%. **Budget alerts
   are notifications, not a spending cap**; Google Cloud does not stop services when they fire.
   See [`deploy/cloudrun/README.md`](deploy/cloudrun/README.md) for setup and release steps.
+
+### Accounts and Spotify profiles
+
+The application account is primary. Spotify is an optional linked identity and
+data source: users can sign in with application email/password, then connect
+Spotify, or start with Spotify and finish creating an application account.
+
+Spotify links use the private, immutable `account_id` returned by the current
+user profile endpoint. The legacy Spotify `id` is retained only as migration
+metadata. Neither identifier, Spotify tokens, nor application email is returned
+by the profile API. The UI receives only the application username, connection
+state, sync status, and public Spotify display name/avatar/profile URL.
+
+The profile menu uses the Spotify avatar when available and otherwise falls
+back to the first character of the application username. It supports pointer
+and keyboard use, closes on outside interaction or Escape, and hides Connect
+and Sync when profile status is temporarily unavailable.
+
+This release adds no OAuth scope and never requests Spotify email. Existing
+development scopes remain unchanged. Spotify Development Mode currently limits
+new apps to five authorized users and requires the app owner to maintain a
+Premium account.
+
+Production database migration and deployment are separate, approval-gated
+operations; running the project locally does not change Neon, Cloud Run,
+GitHub Pages, or Spotify Dashboard settings.
 
 ### Future works  
   * Analysis of playlists with model.

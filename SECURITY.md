@@ -26,6 +26,12 @@ against the hosted demo, which runs on free-tier quotas.
 - Secrets live only in Google Secret Manager; none are stored in this
   repository. CI scans source and the built frontend with Gitleaks.
 - Spotify access and refresh tokens are encrypted at rest (AES-256-GCM).
+- Spotify account links use the immutable `account_id` as private backend data;
+  the legacy Spotify `id` is retained only for migration compatibility. Neither
+  identifier is returned to the frontend or permitted in application logs.
+- The database stores the public Spotify display name, avatar URL, and profile
+  URL required by the account menu. It does not copy avatar image bytes and
+  does not request or store Spotify email.
 - OAuth state and pending account-link keys are random, hashed at rest,
   expire after ten minutes, and can be used once.
 - Production database connections require TLS, and CORS allows only the

@@ -43,8 +43,38 @@ backend/
 - `GET /api/v1/health` - Check if the API is running
 
 ### Authentication
-- `GET /api/v1/auth/login` - Start Spotify OAuth flow
-- `GET /api/v1/auth/callback` - OAuth callback handler
+- `POST /api/v1/auth/register` - Create an application account
+- `POST /api/v1/auth/login` - Sign in with application email/password
+- `GET /api/v1/auth/spotify/login` - Start Spotify OAuth linking/login
+- `GET /api/v1/auth/spotify/callback` - Spotify OAuth callback
+- `POST /api/v1/auth/link-spotify` - Consume a one-time pending-link key
+- `POST /api/v1/auth/spotify/session` - Exchange a one-time Spotify login ticket for an application JWT
+
+### User profile
+
+- `GET /api/v1/user/me` - Return the authenticated application's safe account-menu profile
+
+Example response (synthetic values):
+
+```json
+{
+  "user": { "id": 17, "username": "listener" },
+  "spotify": {
+    "linked": true,
+    "display_name": "Listener",
+    "avatar_url": "https://images.example.test/avatar",
+    "profile_url": "https://profiles.example.test/listener"
+  },
+  "sync": {
+    "status": "completed",
+    "last_synced_at": "2026-10-12T09:00:00Z"
+  }
+}
+```
+
+The endpoint reads PostgreSQL only. It never returns application email,
+Spotify `account_id`, legacy Spotify `id`, OAuth tokens, state, pending keys,
+login tickets, or JWTs.
 
 ### Songs
 - `GET /api/v1/songs/recent` - Fetch recently played songs from Spotify and save to DB
@@ -70,7 +100,7 @@ go mod download
 cp .env.example .env
 ```
 
-3. Update `.env` with your Spotify Client ID
+3. Update `.env` with your local Spotify application values. Never commit it.
 
 4. Run locally:
 ```bash
@@ -156,6 +186,25 @@ controls are in [`deploy/cloudrun/README.md`](../deploy/cloudrun/README.md).
 10. **API Versioning:** Proper API versioning structure (`/api/v1/...`)
 
 ## Migration Notes
+
+### Spotify identity and profile data
+
+- New and refreshed links require Spotify's immutable `account_id`; it is a
+  private backend linking key and is never returned to React or written to
+  application logs.
+- The legacy Spotify `id` remains unique compatibility metadata so preexisting
+  rows can be backfilled after a verified `/me` response.
+- The database stores the public Spotify display name, avatar URL, and profile
+  URL needed by the account menu. Avatar image bytes are not copied.
+- Spotify email is neither requested nor stored. The OAuth scope set is
+  unchanged (`user-library-read`, `user-read-private`,
+  `user-read-recently-played`, and `user-read-currently-playing`); this feature
+  adds no scope.
+- Migration 7 preserves legacy users, encrypted tokens, listening history, and
+  rankings. Applying it to Neon and deploying the matching backend/frontend
+  require separate explicit approval.
+- Spotify Development Mode permits at most five authorized users for new apps
+  and requires the app owner to maintain Premium.
 
 ### Changes from Python Backend
 
