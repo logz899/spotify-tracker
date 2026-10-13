@@ -11,7 +11,9 @@
   border-radius: 50%;
   background: transparent;
   cursor: pointer;
-  transition: background var(--transition-fast), transform var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .profile-menu__trigger:hover,
@@ -66,9 +68,18 @@
   height: 9px;
 }
 
-.profile-menu__badge--linked { color: #0a0a0a; background: var(--green); }
-.profile-menu__badge--unlinked { color: var(--text-tertiary); background: var(--bg-base); }
-.profile-menu__badge--unknown { color: #b58b45; background: var(--bg-base); }
+.profile-menu__badge--linked {
+  color: #0a0a0a;
+  background: var(--green);
+}
+.profile-menu__badge--unlinked {
+  color: var(--text-tertiary);
+  background: var(--bg-base);
+}
+.profile-menu__badge--unknown {
+  color: #b58b45;
+  background: var(--bg-base);
+}
 
 .profile-menu__panel {
   position: absolute;

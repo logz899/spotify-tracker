@@ -63,10 +63,15 @@
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 50%;
   background: transparent;
-  transition: border-color 180ms ease, transform 180ms ease;
+  transition:
+    border-color 180ms ease,
+    transform 180ms ease;
 }
 
-.register-panel__close:hover { border-color: rgba(255, 255, 255, 0.48); transform: rotate(6deg); }
+.register-panel__close:hover {
+  border-color: rgba(255, 255, 255, 0.48);
+  transform: rotate(6deg);
+}
 
 .register-panel__close span {
   position: absolute;
@@ -78,9 +83,13 @@
   transform: rotate(45deg);
 }
 
-.register-panel__close span:last-child { transform: rotate(-45deg); }
+.register-panel__close span:last-child {
+  transform: rotate(-45deg);
+}
 
-.register-card { width: 100%; }
+.register-card {
+  width: 100%;
+}
 
 .register-brand {
   margin-bottom: 28px;
@@ -111,7 +120,9 @@
   line-height: 1.5;
 }
 
-.register-notice--error { color: #e2a29e; }
+.register-notice--error {
+  color: #e2a29e;
+}
 
 .register-notice-dot {
   width: 5px;
@@ -122,8 +133,14 @@
   background: currentColor;
 }
 
-.register-form { display: grid; gap: 17px; }
-.register-form-field { display: grid; gap: 7px; }
+.register-form {
+  display: grid;
+  gap: 17px;
+}
+.register-form-field {
+  display: grid;
+  gap: 7px;
+}
 
 .register-field-label {
   color: #959d97;
@@ -145,9 +162,15 @@
   transition: border-color 180ms ease;
 }
 
-.register-form-field input::placeholder { color: #515853; }
-.register-form-field input:focus { border-color: #b4c4b7; }
-.register-form-field--invalid input { border-color: rgba(226, 162, 158, 0.72); }
+.register-form-field input::placeholder {
+  color: #515853;
+}
+.register-form-field input:focus {
+  border-color: #b4c4b7;
+}
+.register-form-field--invalid input {
+  border-color: rgba(226, 162, 158, 0.72);
+}
 
 .register-field-error {
   color: #e2a29e;
@@ -170,11 +193,18 @@
   font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.01em;
-  transition: background 180ms ease, opacity 180ms ease;
+  transition:
+    background 180ms ease,
+    opacity 180ms ease;
 }
 
-.register-btn:hover:not(:disabled) { background: #fff; }
-.register-btn:disabled { cursor: not-allowed; opacity: 0.48; }
+.register-btn:hover:not(:disabled) {
+  background: #fff;
+}
+.register-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
 
 .register-text-link {
   padding: 0;
@@ -208,13 +238,31 @@
   outline-offset: 4px;
 }
 
-@keyframes register-overlay-in { from { opacity: 0; } }
-@keyframes register-overlay-out { to { opacity: 0; } }
-@keyframes register-panel-in { from { transform: translateX(100%); } }
-@keyframes register-panel-out { to { transform: translateX(100%); } }
+@keyframes register-overlay-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes register-overlay-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes register-panel-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes register-panel-out {
+  to {
+    transform: translateX(100%);
+  }
+}
 
 @media (max-width: 720px) {
-  .register-overlay { align-items: flex-end; }
+  .register-overlay {
+    align-items: flex-end;
+  }
 
   .register-panel {
     width: 100%;
@@ -225,18 +273,39 @@
     border-left: 0;
     animation-name: register-panel-up;
   }
-  .register-overlay--closing .register-panel { animation-name: register-panel-down; }
+  .register-overlay--closing .register-panel {
+    animation-name: register-panel-down;
+  }
 
-  .register-panel__close { top: 20px; right: 22px; }
-  .register-brand h1 { font-size: 2.55rem; }
-  .register-form { gap: 15px; }
-  .register-privacy { margin-top: 26px; }
+  .register-panel__close {
+    top: 20px;
+    right: 22px;
+  }
+  .register-brand h1 {
+    font-size: 2.55rem;
+  }
+  .register-form {
+    gap: 15px;
+  }
+  .register-privacy {
+    margin-top: 26px;
+  }
 }
 
-@keyframes register-panel-up { from { transform: translateY(100%); } }
-@keyframes register-panel-down { to { transform: translateY(100%); } }
+@keyframes register-panel-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes register-panel-down {
+  to {
+    transform: translateY(100%);
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .register-overlay__backdrop,
-  .register-panel { animation: none; }
+  .register-panel {
+    animation: none;
+  }
 }

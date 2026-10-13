@@ -33,7 +33,11 @@ beforeEach(() => {
 });
 
 test("current user profile uses the protected profile endpoint", async () => {
-  const profile = { user: { id: 17, username: "listener" }, spotify: { linked: false }, sync: { status: null } };
+  const profile = {
+    user: { id: 17, username: "listener" },
+    spotify: { linked: false },
+    sync: { status: null },
+  };
   mockApi.get.mockResolvedValue({ data: profile });
 
   await expect(getCurrentUser()).resolves.toEqual(profile);
@@ -57,7 +61,9 @@ test("Spotify session exchange sends only the one-time ticket", async () => {
 
   await exchangeSpotifySession("login-ticket");
 
-  expect(mockApi.post).toHaveBeenCalledWith("/api/v1/auth/spotify/session", { ticket: "login-ticket" });
+  expect(mockApi.post).toHaveBeenCalledWith("/api/v1/auth/spotify/session", {
+    ticket: "login-ticket",
+  });
 });
 
 test("authenticated 401 response records expiry, clears the session, and returns to login", async () => {

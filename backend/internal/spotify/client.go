@@ -87,7 +87,7 @@ func (c *Client) GetCurrentUserProfile(ctx context.Context, token *oauth2.Token)
 
 	accountID := strings.TrimSpace(decoded.AccountID)
 	if accountID == "" {
-		return models.SpotifyProfile{}, errors.New("Spotify profile has no account ID")
+		return models.SpotifyProfile{}, errors.New("spotify profile has no account ID")
 	}
 
 	var avatarURL string
@@ -108,11 +108,7 @@ func (c *Client) GetCurrentUserProfile(ctx context.Context, token *oauth2.Token)
 }
 
 func (c *Client) requestCurrentUserProfile(ctx context.Context, token *oauth2.Token) (*http.Response, error) {
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, spotifyProfileURL, nil)
-	if err != nil {
-		return nil, err
-	}
-	return c.auth.Client(ctx, token).Do(request)
+	return c.auth.Client(ctx, token).Get(spotifyProfileURL)
 }
 
 func (c *Client) GetRecentlyPlayed(ctx context.Context, token *oauth2.Token) ([]models.Song, error) {

@@ -6,15 +6,11 @@ import Home from "./pages/Home";
 import { getToken } from "./services/authSession";
 import "./App.css";
 
-const PublicOnlyRoute = ({ children }) =>
-  getToken() ? <Navigate to="/home" replace /> : children;
+const PublicOnlyRoute = ({ children }) => (getToken() ? <Navigate to="/home" replace /> : children);
 
-const ProtectedRoute = ({ children }) =>
-  getToken() ? children : <Navigate to="/" replace />;
+const ProtectedRoute = ({ children }) => (getToken() ? children : <Navigate to="/" replace />);
 
-const DefaultRoute = () => (
-  <Navigate to={getToken() ? "/home" : "/"} replace />
-);
+const DefaultRoute = () => <Navigate to={getToken() ? "/home" : "/"} replace />;
 
 function App() {
   return (

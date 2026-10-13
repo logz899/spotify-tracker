@@ -58,7 +58,7 @@ func (db *DB) CompleteLinkedSpotifyLogin(
 		return ErrSpotifyAccountNotLinked
 	}
 	if len(ticketHash) != 32 {
-		return errors.New("Spotify login ticket hash must be 32 bytes")
+		return errors.New("spotify login ticket hash must be 32 bytes")
 	}
 	accessToken, refreshToken, err := db.encryptSpotifyToken(authorization.Token)
 	if err != nil {

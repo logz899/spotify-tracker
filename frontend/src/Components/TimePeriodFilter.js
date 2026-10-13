@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import './TimePeriodFilter.css';
+import React, { useState } from "react";
+import "./TimePeriodFilter.css";
 
 /**
  * TimePeriodFilter
@@ -14,14 +14,14 @@ import './TimePeriodFilter.css';
  */
 
 const PRESETS = [
-  { id: 'all', label: 'All Time' },
-  { id: 'last_7', label: 'Last 7 Days' },
-  { id: 'this_month', label: 'This Month' },
-  { id: 'last_month', label: 'Last Month' },
+  { id: "all", label: "All Time" },
+  { id: "last_7", label: "Last 7 Days" },
+  { id: "this_month", label: "This Month" },
+  { id: "last_month", label: "Last Month" },
 ];
 
 const TimePeriodFilter = ({ onFilterChange, totalSongs, filteredSongs }) => {
-  const [activePreset, setActivePreset] = useState('all');
+  const [activePreset, setActivePreset] = useState("all");
 
   const handlePreset = (presetId) => {
     setActivePreset(presetId);
@@ -31,22 +31,22 @@ const TimePeriodFilter = ({ onFilterChange, totalSongs, filteredSongs }) => {
     let end = null;
 
     switch (presetId) {
-      case 'all':
+      case "all":
         // null, null means no filter — show everything
         break;
 
-      case 'last_7':
+      case "last_7":
         start = new Date(today);
         start.setDate(today.getDate() - 7);
         end = today;
         break;
 
-      case 'this_month':
+      case "this_month":
         start = new Date(today.getFullYear(), today.getMonth(), 1);
         end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
         break;
 
-      case 'last_month':
+      case "last_month":
         start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
         end = new Date(today.getFullYear(), today.getMonth(), 0);
         break;
@@ -58,17 +58,16 @@ const TimePeriodFilter = ({ onFilterChange, totalSongs, filteredSongs }) => {
     onFilterChange(start, end);
   };
 
-  const isFiltered = activePreset !== 'all';
+  const isFiltered = activePreset !== "all";
 
   return (
     <div className="tpf-wrapper">
-
       {/* Pill buttons */}
       <nav className="tpf-pills" aria-label="Time period filter">
         {PRESETS.map((preset) => (
           <button
             key={preset.id}
-            className={`tpf-pill${activePreset === preset.id ? ' tpf-pill--active' : ''}`}
+            className={`tpf-pill${activePreset === preset.id ? " tpf-pill--active" : ""}`}
             onClick={() => handlePreset(preset.id)}
             aria-pressed={activePreset === preset.id}
             type="button"
@@ -84,7 +83,6 @@ const TimePeriodFilter = ({ onFilterChange, totalSongs, filteredSongs }) => {
           <strong>{filteredSongs}</strong> of {totalSongs}
         </span>
       )}
-
     </div>
   );
 };

@@ -172,7 +172,9 @@ test("explains when the registration API cannot be reached", async () => {
 });
 
 test("uses a safe reason for unexpected server failures", async () => {
-  register.mockRejectedValue({ response: { status: 500, data: { error: "sensitive database detail" } } });
+  register.mockRejectedValue({
+    response: { status: 500, data: { error: "sensitive database detail" } },
+  });
   renderRegister();
 
   await fillRegistration();

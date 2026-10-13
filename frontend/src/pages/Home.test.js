@@ -156,6 +156,8 @@ test("the header has no standalone greeting, Sync, Connect, or Logout controls",
   const header = screen.getByRole("banner");
   expect(header).not.toHaveTextContent(/Hey,/i);
   expect(screen.queryByRole("button", { name: /refresh songs/i })).not.toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: /connect your spotify account/i })).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: /connect your spotify account/i })
+  ).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /^log out$/i })).not.toBeInTheDocument();
 });

@@ -182,7 +182,9 @@ const ProfileMenu = ({ profile, syncing, onSync, onConnect, onLogout }) => {
 
           <div className="profile-menu__separator" />
           <button
-            ref={spotify.linked === null || spotify.linked === undefined ? firstActionRef : undefined}
+            ref={
+              spotify.linked === null || spotify.linked === undefined ? firstActionRef : undefined
+            }
             className="profile-menu__logout"
             type="button"
             role="menuitem"

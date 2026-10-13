@@ -62,15 +62,21 @@ const Register = () => {
 
     setPanelClosing(true);
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    closeTimer.current = window.setTimeout(() => {
-      closeTimer.current = null;
-      navigate("/");
-    }, reducedMotion ? 0 : PANEL_EXIT_MS);
+    closeTimer.current = window.setTimeout(
+      () => {
+        closeTimer.current = null;
+        navigate("/");
+      },
+      reducedMotion ? 0 : PANEL_EXIT_MS
+    );
   }, [navigate, panelClosing]);
 
-  useEffect(() => () => {
-    if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
+    },
+    []
+  );
 
   useEffect(() => {
     pendingSpotify.captureFromLocation();
@@ -173,120 +179,168 @@ const Register = () => {
           onClick={closePanel}
         />
 
-        <section className="register-panel" role="dialog" aria-modal="true" aria-labelledby="register-title">
-          <button className="register-panel__close" type="button" aria-label="Back to log in" onClick={closePanel}>
-            <span /><span />
+        <section
+          className="register-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="register-title"
+        >
+          <button
+            className="register-panel__close"
+            type="button"
+            aria-label="Back to log in"
+            onClick={closePanel}
+          >
+            <span />
+            <span />
           </button>
-        <div className="register-card">
-          <div className="register-brand">
-            <h1 id="register-title">Create account</h1>
+          <div className="register-card">
+            <div className="register-brand">
+              <h1 id="register-title">Create account</h1>
+            </div>
+
+            {spotifyPending && (
+              <div className="register-notice register-notice--success" role="status">
+                <span className="register-notice-dot" aria-hidden="true" />
+                Spotify connected. Your account will be linked after registration.
+              </div>
+            )}
+
+            {error && (
+              <div className="register-notice register-notice--error" role="alert">
+                <span className="register-notice-dot" aria-hidden="true" />
+                <span>{error}</span>
+                {canContinue && (
+                  <button
+                    type="button"
+                    className="register-text-link"
+                    onClick={() => navigate("/home")}
+                  >
+                    Continue to Home
+                  </button>
+                )}
+              </div>
+            )}
+
+            <form className="register-form" onSubmit={handleSubmit} noValidate>
+              <label
+                className={`register-form-field${fieldErrors.username ? " register-form-field--invalid" : ""}`}
+              >
+                <span className="register-field-label">Username</span>
+                <input
+                  type="text"
+                  id="username"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  placeholder="Choose a username"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck="false"
+                  required
+                  minLength={3}
+                  maxLength={50}
+                  aria-invalid={Boolean(fieldErrors.username)}
+                  aria-describedby={fieldErrors.username ? "username-error" : undefined}
+                />
+                {fieldErrors.username && (
+                  <span id="username-error" className="register-field-error" role="alert">
+                    {fieldErrors.username}
+                  </span>
+                )}
+              </label>
+
+              <label
+                className={`register-form-field${fieldErrors.email ? " register-form-field--invalid" : ""}`}
+              >
+                <span className="register-field-label">Email</span>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="your@email.com"
+                  autoComplete="email"
+                  required
+                  aria-invalid={Boolean(fieldErrors.email)}
+                  aria-describedby={fieldErrors.email ? "email-error" : undefined}
+                />
+                {fieldErrors.email && (
+                  <span id="email-error" className="register-field-error" role="alert">
+                    {fieldErrors.email}
+                  </span>
+                )}
+              </label>
+
+              <label
+                className={`register-form-field${fieldErrors.password ? " register-form-field--invalid" : ""}`}
+              >
+                <span className="register-field-label">Password</span>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="At least 10 characters"
+                  autoComplete="new-password"
+                  required
+                  minLength={10}
+                  aria-invalid={Boolean(fieldErrors.password)}
+                  aria-describedby={fieldErrors.password ? "password-error" : undefined}
+                />
+                {fieldErrors.password && (
+                  <span id="password-error" className="register-field-error" role="alert">
+                    {fieldErrors.password}
+                  </span>
+                )}
+              </label>
+
+              <label
+                className={`register-form-field${fieldErrors.confirmPassword ? " register-form-field--invalid" : ""}`}
+              >
+                <span className="register-field-label">Confirm Password</span>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="Re-enter your password"
+                  autoComplete="new-password"
+                  required
+                  aria-invalid={Boolean(fieldErrors.confirmPassword)}
+                  aria-describedby={
+                    fieldErrors.confirmPassword ? "confirm-password-error" : undefined
+                  }
+                />
+                {fieldErrors.confirmPassword && (
+                  <span id="confirm-password-error" className="register-field-error" role="alert">
+                    {fieldErrors.confirmPassword}
+                  </span>
+                )}
+              </label>
+
+              <button type="submit" className="register-btn" disabled={loading} aria-busy={loading}>
+                <span>{loading ? "Creating account..." : "Create account"}</span>
+                {!loading && <span aria-hidden="true">↗</span>}
+              </button>
+            </form>
+
+            <p className="register-login-footer">
+              Already have an account?{" "}
+              <button
+                type="button"
+                className="register-text-link"
+                aria-label="Already have an account? Log in"
+                onClick={() => navigate("/")}
+              >
+                Log in
+              </button>
+            </p>
           </div>
-
-          {spotifyPending && (
-            <div className="register-notice register-notice--success" role="status">
-              <span className="register-notice-dot" aria-hidden="true" />
-              Spotify connected. Your account will be linked after registration.
-            </div>
-          )}
-
-          {error && (
-            <div className="register-notice register-notice--error" role="alert">
-              <span className="register-notice-dot" aria-hidden="true" />
-              <span>{error}</span>
-              {canContinue && (
-                <button type="button" className="register-text-link" onClick={() => navigate("/home")}>
-                  Continue to Home
-                </button>
-              )}
-            </div>
-          )}
-
-          <form className="register-form" onSubmit={handleSubmit} noValidate>
-            <label className={`register-form-field${fieldErrors.username ? " register-form-field--invalid" : ""}`}>
-              <span className="register-field-label">Username</span>
-              <input
-                type="text"
-                id="username"
-                name="username"
-                value={formData.username}
-                onChange={handleChange}
-                placeholder="Choose a username"
-                autoComplete="username"
-                autoCapitalize="none"
-                spellCheck="false"
-                required
-                minLength={3}
-                maxLength={50}
-                aria-invalid={Boolean(fieldErrors.username)}
-                aria-describedby={fieldErrors.username ? "username-error" : undefined}
-              />
-              {fieldErrors.username && <span id="username-error" className="register-field-error" role="alert">{fieldErrors.username}</span>}
-            </label>
-
-            <label className={`register-form-field${fieldErrors.email ? " register-form-field--invalid" : ""}`}>
-              <span className="register-field-label">Email</span>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="your@email.com"
-                autoComplete="email"
-                required
-                aria-invalid={Boolean(fieldErrors.email)}
-                aria-describedby={fieldErrors.email ? "email-error" : undefined}
-              />
-              {fieldErrors.email && <span id="email-error" className="register-field-error" role="alert">{fieldErrors.email}</span>}
-            </label>
-
-            <label className={`register-form-field${fieldErrors.password ? " register-form-field--invalid" : ""}`}>
-              <span className="register-field-label">Password</span>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="At least 10 characters"
-                autoComplete="new-password"
-                required
-                minLength={10}
-                aria-invalid={Boolean(fieldErrors.password)}
-                aria-describedby={fieldErrors.password ? "password-error" : undefined}
-              />
-              {fieldErrors.password && <span id="password-error" className="register-field-error" role="alert">{fieldErrors.password}</span>}
-            </label>
-
-            <label className={`register-form-field${fieldErrors.confirmPassword ? " register-form-field--invalid" : ""}`}>
-              <span className="register-field-label">Confirm Password</span>
-              <input
-                type="password"
-                id="confirmPassword"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                placeholder="Re-enter your password"
-                autoComplete="new-password"
-                required
-                aria-invalid={Boolean(fieldErrors.confirmPassword)}
-                aria-describedby={fieldErrors.confirmPassword ? "confirm-password-error" : undefined}
-              />
-              {fieldErrors.confirmPassword && <span id="confirm-password-error" className="register-field-error" role="alert">{fieldErrors.confirmPassword}</span>}
-            </label>
-
-            <button type="submit" className="register-btn" disabled={loading} aria-busy={loading}>
-              <span>{loading ? "Creating account..." : "Create account"}</span>
-              {!loading && <span aria-hidden="true">↗</span>}
-            </button>
-          </form>
-
-          <p className="register-login-footer">
-            Already have an account?{" "}
-            <button type="button" className="register-text-link" aria-label="Already have an account? Log in" onClick={() => navigate("/")}>Log in</button>
-          </p>
-        </div>
-        <p className="register-privacy">Your Spotify credentials stay with Spotify.</p>
+          <p className="register-privacy">Your Spotify credentials stay with Spotify.</p>
         </section>
       </div>
     </main>

@@ -133,10 +133,10 @@ func normalizedSpotifyProfile(profile models.SpotifyProfile) (models.SpotifyProf
 	profile.AvatarURL = strings.TrimSpace(profile.AvatarURL)
 	profile.ProfileURL = strings.TrimSpace(profile.ProfileURL)
 	if profile.AccountID == "" {
-		return models.SpotifyProfile{}, errors.New("Spotify account ID is required")
+		return models.SpotifyProfile{}, errors.New("spotify account ID is required")
 	}
 	if profile.LegacyUserID == "" {
-		return models.SpotifyProfile{}, errors.New("Spotify legacy user ID is required")
+		return models.SpotifyProfile{}, errors.New("spotify legacy user ID is required")
 	}
 	return profile, nil
 }

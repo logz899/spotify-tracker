@@ -20,9 +20,7 @@ function renderAt(hash, authenticated = false) {
 
 test("renders login at the root hash route", () => {
   renderAt("#/");
-  expect(
-    screen.getByRole("heading", { name: /music, in order/i })
-  ).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /music, in order/i })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /^log in$/i })).toBeInTheDocument();
 });
 

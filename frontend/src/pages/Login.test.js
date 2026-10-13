@@ -2,7 +2,12 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { HashRouter } from "react-router-dom";
 import Login from "./Login";
-import { exchangeSpotifySession, linkPendingSpotify, login, loginWithSpotify } from "../services/api";
+import {
+  exchangeSpotifySession,
+  linkPendingSpotify,
+  login,
+  loginWithSpotify,
+} from "../services/api";
 import {
   consumeSessionExpiredNotice,
   getToken,
@@ -67,9 +72,7 @@ test("opens login with a one-time message after the session expires", async () =
   renderLogin();
 
   expect(await screen.findByRole("dialog", { name: /welcome back/i })).toBeInTheDocument();
-  expect(screen.getByRole("alert")).toHaveTextContent(
-    "Your session expired. Please log in again."
-  );
+  expect(screen.getByRole("alert")).toHaveTextContent("Your session expired. Please log in again.");
   expect(consumeSessionExpiredNotice()).toBe(false);
 });
 
@@ -118,7 +121,10 @@ test("stores a normal login in the tab session and navigates home", async () => 
 });
 
 test("exchanges a linked Spotify ticket once, stores the session, and navigates home", async () => {
-  exchangeSpotifySession.mockResolvedValue({ token: "spotify-jwt", user: { username: "listener" } });
+  exchangeSpotifySession.mockResolvedValue({
+    token: "spotify-jwt",
+    user: { username: "listener" },
+  });
 
   renderLogin("#/?spotify_login=true&ticket=login-ticket");
 

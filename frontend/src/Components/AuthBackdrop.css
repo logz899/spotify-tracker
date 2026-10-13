@@ -3,9 +3,7 @@
   min-height: 100svh;
   overflow: hidden;
   color: #f2f4f1;
-  background:
-    radial-gradient(circle at 72% 42%, rgba(96, 124, 102, 0.1), transparent 34%),
-    #050706;
+  background: radial-gradient(circle at 72% 42%, rgba(96, 124, 102, 0.1), transparent 34%), #050706;
   isolation: isolate;
 }
 
@@ -19,7 +17,12 @@
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: linear-gradient(90deg, rgba(5, 7, 6, 0.94) 0%, rgba(5, 7, 6, 0.38) 48%, rgba(5, 7, 6, 0.68) 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(5, 7, 6, 0.94) 0%,
+    rgba(5, 7, 6, 0.38) 48%,
+    rgba(5, 7, 6, 0.68) 100%
+  );
   pointer-events: none;
 }
 
@@ -54,11 +57,23 @@
   font-size: 0.8rem;
   font-weight: 520;
   letter-spacing: 0.015em;
-  transition: color 180ms ease, border-color 180ms ease, background 180ms ease;
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
 }
 
-.auth-nav__action { width: 170px; min-height: 44px; padding: 0 15px; }
-.auth-hero__action { width: 166px; min-height: 48px; margin-top: 30px; padding: 0 17px; }
+.auth-nav__action {
+  width: 170px;
+  min-height: 44px;
+  padding: 0 15px;
+}
+.auth-hero__action {
+  width: 166px;
+  min-height: 48px;
+  margin-top: 30px;
+  padding: 0 17px;
+}
 
 .auth-nav__action:hover,
 .auth-hero__action:hover {
@@ -123,10 +138,29 @@
 }
 
 @media (max-width: 720px) {
-  .auth-nav { padding: 22px 20px; }
-  .auth-nav__action { width: auto; min-height: 40px; gap: 18px; padding: 0 12px; font-size: 0.72rem; }
-  .auth-hero { padding: 120px 22px 38px; }
-  .auth-hero__content { margin-left: 0; }
-  .auth-hero h1 { max-width: 430px; font-size: clamp(3.25rem, 13.5vw, 4rem); line-height: 0.94; }
-  .auth-hero__tagline { margin-top: 20px; font-size: 0.78rem; }
+  .auth-nav {
+    padding: 22px 20px;
+  }
+  .auth-nav__action {
+    width: auto;
+    min-height: 40px;
+    gap: 18px;
+    padding: 0 12px;
+    font-size: 0.72rem;
+  }
+  .auth-hero {
+    padding: 120px 22px 38px;
+  }
+  .auth-hero__content {
+    margin-left: 0;
+  }
+  .auth-hero h1 {
+    max-width: 430px;
+    font-size: clamp(3.25rem, 13.5vw, 4rem);
+    line-height: 0.94;
+  }
+  .auth-hero__tagline {
+    margin-top: 20px;
+    font-size: 0.78rem;
+  }
 }
