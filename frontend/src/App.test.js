@@ -31,9 +31,30 @@ test("renders registration on direct hash navigation", () => {
   expect(screen.getByRole("heading", { name: /create account/i })).toBeInTheDocument();
 });
 
+test("redirects an authenticated user from the login route to home", async () => {
+  renderAt("#/", true);
+
+  await waitFor(() => expect(window.location.hash).toBe("#/home"));
+  expect(await screen.findByLabelText(/account menu for test-user/i)).toBeInTheDocument();
+});
+
+test("redirects an authenticated user from registration to home", async () => {
+  renderAt("#/register", true);
+
+  await waitFor(() => expect(window.location.hash).toBe("#/home"));
+  expect(await screen.findByLabelText(/account menu for test-user/i)).toBeInTheDocument();
+});
+
+test("redirects an unauthenticated user from home to login", async () => {
+  renderAt("#/home");
+
+  await waitFor(() => expect(window.location.hash).toBe("#/"));
+  expect(screen.getByRole("button", { name: /^log in$/i })).toBeInTheDocument();
+});
+
 test("renders protected home on direct hash navigation with a tab session", async () => {
   renderAt("#/home", true);
-  expect(await screen.findByLabelText(/logged in as test-user/i)).toBeInTheDocument();
+  expect(await screen.findByLabelText(/account menu for test-user/i)).toBeInTheDocument();
   expect(screen.getByText("Spotify Tracker")).toBeInTheDocument();
 });
 
@@ -42,4 +63,11 @@ test("unknown hash route returns to login without a server navigation", async ()
 
   await waitFor(() => expect(window.location.hash).toBe("#/"));
   expect(screen.getByRole("button", { name: /^log in$/i })).toBeInTheDocument();
+});
+
+test("unknown hash route returns an authenticated user to home", async () => {
+  renderAt("#/missing", true);
+
+  await waitFor(() => expect(window.location.hash).toBe("#/home"));
+  expect(await screen.findByLabelText(/account menu for test-user/i)).toBeInTheDocument();
 });

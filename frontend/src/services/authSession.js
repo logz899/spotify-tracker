@@ -1,5 +1,6 @@
 const TOKEN_KEY = "token";
 const USER_KEY = "user";
+const SESSION_EXPIRED_KEY = "session_expired";
 
 export const getToken = () => window.sessionStorage.getItem(TOKEN_KEY);
 
@@ -24,4 +25,14 @@ export const setSession = (token, user) => {
 export const clearSession = () => {
   window.sessionStorage.removeItem(TOKEN_KEY);
   window.sessionStorage.removeItem(USER_KEY);
+};
+
+export const setSessionExpiredNotice = () => {
+  window.sessionStorage.setItem(SESSION_EXPIRED_KEY, "true");
+};
+
+export const consumeSessionExpiredNotice = () => {
+  const expired = window.sessionStorage.getItem(SESSION_EXPIRED_KEY) === "true";
+  window.sessionStorage.removeItem(SESSION_EXPIRED_KEY);
+  return expired;
 };

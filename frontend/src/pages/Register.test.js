@@ -104,6 +104,16 @@ test("captures, links, and clears a pending Spotify key after registration", asy
   expect(window.location.hash).toBe("#/home");
 });
 
+test("offers Email login without dropping a pending Spotify authorization", async () => {
+  renderRegister("#/register?spotify_connected=true&key=pending-key");
+
+  await waitFor(() => expect(getPending()).toBe("pending-key"));
+  await userEvent.click(screen.getByRole("button", { name: /already have an account/i }));
+
+  expect(window.location.hash).toBe("#/");
+  expect(getPending()).toBe("pending-key");
+});
+
 test("rejects mismatched passwords before calling the API", async () => {
   renderRegister();
 
@@ -120,4 +130,54 @@ test("rejects passwords below the backend ten-character minimum", async () => {
 
   expect(screen.getByRole("alert")).toHaveTextContent(/at least 10 characters/i);
   expect(register).not.toHaveBeenCalled();
+});
+
+test("shows a reason beside every invalid registration field", async () => {
+  renderRegister();
+
+  await userEvent.type(screen.getByLabelText(/^username$/i), "ab");
+  await userEvent.type(screen.getByLabelText(/^email$/i), "not-an-email");
+  await userEvent.type(screen.getByLabelText(/^password$/i), "short");
+  await userEvent.type(screen.getByLabelText(/confirm password/i), "different");
+  await userEvent.click(screen.getByRole("button", { name: /create account/i }));
+
+  expect(screen.getByText("Username must be between 3 and 50 characters.")).toBeInTheDocument();
+  expect(screen.getByText("Enter a valid email address.")).toBeInTheDocument();
+  expect(screen.getByText("Password must be at least 10 characters.")).toBeInTheDocument();
+  expect(screen.getByText("Passwords do not match.")).toBeInTheDocument();
+  expect(register).not.toHaveBeenCalled();
+});
+
+test.each([
+  ["Username already exists", "Username is already in use."],
+  ["Email already exists", "Email is already in use."],
+])("maps backend conflict %s to its field", async (backendError, visibleReason) => {
+  register.mockRejectedValue({ response: { status: 409, data: { error: backendError } } });
+  renderRegister();
+
+  await fillRegistration();
+
+  expect(await screen.findByText(visibleReason)).toBeInTheDocument();
+});
+
+test("explains when the registration API cannot be reached", async () => {
+  register.mockRejectedValue(new Error("Network Error"));
+  renderRegister();
+
+  await fillRegistration();
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Cannot connect to the server. Check your connection and try again."
+  );
+});
+
+test("uses a safe reason for unexpected server failures", async () => {
+  register.mockRejectedValue({ response: { status: 500, data: { error: "sensitive database detail" } } });
+  renderRegister();
+
+  await fillRegistration();
+
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("Server could not create the account. Please try again.");
+  expect(alert).not.toHaveTextContent("sensitive database detail");
 });

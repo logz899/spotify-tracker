@@ -1,4 +1,11 @@
-import { clearSession, getToken, getUser, setSession } from "./authSession";
+import {
+  clearSession,
+  consumeSessionExpiredNotice,
+  getToken,
+  getUser,
+  setSession,
+  setSessionExpiredNotice,
+} from "./authSession";
 
 beforeEach(() => {
   window.sessionStorage.clear();
@@ -31,4 +38,11 @@ test("clears both token and user from the tab session", () => {
 
   expect(getToken()).toBeNull();
   expect(getUser()).toBeNull();
+});
+
+test("consumes the session-expired notice only once", () => {
+  setSessionExpiredNotice();
+
+  expect(consumeSessionExpiredNotice()).toBe(true);
+  expect(consumeSessionExpiredNotice()).toBe(false);
 });

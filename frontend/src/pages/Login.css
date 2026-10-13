@@ -10,26 +10,12 @@
   padding: 30px clamp(28px, 5vw, 74px);
 }
 
-.login-nav__brand .brand-mark__symbol {
-  width: 34px;
-  height: 34px;
-  color: #dbe3dc;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-
-.login-nav__brand .brand-mark__symbol svg {
-  width: 30px;
-  height: 30px;
-}
-
-.login-nav__brand .brand-mark__word {
+.login-nav__brand {
   color: #f4f6f3;
-  font-size: 0.82rem;
-  font-weight: 720;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+}
+
+.login-nav__brand .brand-mark__symbol {
+  color: #dbe3dc;
 }
 
 .login-nav__register {
@@ -276,6 +262,14 @@
 
 .login-notice--error { color: #e2a29e; }
 
+.login-recovery-actions {
+  display: flex;
+  gap: 18px;
+  margin: -7px 0 18px;
+  color: #b8c4ba;
+  font-size: 0.72rem;
+}
+
 .login-notice-dot {
   width: 5px;
   height: 5px;
@@ -409,8 +403,6 @@
 
 @media (max-width: 720px) {
   .login-nav { padding: 22px 20px; }
-  .login-nav__brand { gap: 8px; }
-  .login-nav__brand .brand-mark__word { font-size: 0.68rem; letter-spacing: 0.12em; }
   .login-nav__register { width: auto; min-height: 38px; gap: 18px; padding: 0 11px; font-size: 0.56rem; }
 
   .login-hero {

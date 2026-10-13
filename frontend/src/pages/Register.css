@@ -125,7 +125,7 @@
 .register-form { display: grid; gap: 17px; }
 .register-form-field { display: grid; gap: 7px; }
 
-.register-form-field > span {
+.register-field-label {
   color: #959d97;
   font-size: 0.72rem;
   font-weight: 500;
@@ -147,6 +147,13 @@
 
 .register-form-field input::placeholder { color: #515853; }
 .register-form-field input:focus { border-color: #b4c4b7; }
+.register-form-field--invalid input { border-color: rgba(226, 162, 158, 0.72); }
+
+.register-field-error {
+  color: #e2a29e;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
 
 .register-btn {
   width: 100%;
@@ -176,6 +183,13 @@
   border-bottom: 1px solid currentColor;
   background: transparent;
   font: inherit;
+}
+
+.register-login-footer {
+  margin: 18px 0 0;
+  color: #727b74;
+  font-size: 0.7rem;
+  text-align: center;
 }
 
 .register-privacy {

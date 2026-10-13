@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { linkPendingSpotify, login, loginWithSpotify } from "../services/api";
-import { setSession } from "../services/authSession";
+import { exchangeSpotifySession, linkPendingSpotify, login, loginWithSpotify } from "../services/api";
+import { consumeSessionExpiredNotice, setSession } from "../services/authSession";
 import * as pendingSpotify from "../services/pendingSpotify";
+import * as spotifySession from "../services/spotifySession";
 import AuthBackdrop from "../Components/AuthBackdrop";
 import "./Login.css";
 
@@ -16,10 +17,12 @@ const PANEL_EXIT_MS = 360;
 
 const Login = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({ username: "", password: "" });
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [spotifyPending, setSpotifyPending] = useState(false);
+  const [spotifyLoginProcessing, setSpotifyLoginProcessing] = useState(false);
+  const [spotifyLoginFailed, setSpotifyLoginFailed] = useState(false);
   const [canContinue, setCanContinue] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelClosing, setPanelClosing] = useState(false);
@@ -49,11 +52,45 @@ const Login = () => {
   }, []);
 
   useEffect(() => {
+    const sessionExpired = consumeSessionExpiredNotice();
+    if (sessionExpired) {
+      setError("Your session expired. Please log in again.");
+    }
+
+    const capturedTicket = spotifySession.captureFromLocation();
+    const ticket = capturedTicket || spotifySession.get();
+    if (ticket) {
+      let cancelled = false;
+      setPanelOpen(true);
+      setSpotifyLoginProcessing(true);
+
+      exchangeSpotifySession(ticket)
+        .then((response) => {
+          if (cancelled) return;
+          setSession(response.token, response.user);
+          navigate("/home");
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setSpotifyLoginFailed(true);
+          setError("Spotify login expired or was already used. Try Spotify again or use Email login.");
+        })
+        .finally(() => {
+          spotifySession.clear();
+          if (!cancelled) setSpotifyLoginProcessing(false);
+        });
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
     pendingSpotify.captureFromLocation();
     const hasPendingSpotify = Boolean(pendingSpotify.get());
     setSpotifyPending(hasPendingSpotify);
-    setPanelOpen(hasPendingSpotify);
-  }, []);
+    setPanelOpen(hasPendingSpotify || sessionExpired);
+    return undefined;
+  }, [navigate]);
 
   useEffect(() => {
     if (!panelOpen) return undefined;
@@ -77,7 +114,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const response = await login(formData.username, formData.password);
+      const response = await login(formData.email.trim().toLowerCase(), formData.password);
       setSession(response.token, response.user);
 
       const pendingKey = pendingSpotify.get();
@@ -111,7 +148,7 @@ const Login = () => {
           if (event.target === event.currentTarget) closePanel();
         }}>
           <section className="login-panel" role="dialog" aria-modal="true" aria-labelledby="login-title">
-            <button className="login-panel__close" type="button" aria-label="Close login" onClick={closePanel}>
+            <button className="login-panel__close" type="button" aria-label="Close login" onClick={closePanel} disabled={spotifyLoginProcessing}>
               <span /><span />
             </button>
 
@@ -135,10 +172,27 @@ const Login = () => {
                 </div>
               )}
 
-              <form className="login-form" onSubmit={handleSubmit} noValidate>
+              {spotifyLoginProcessing && (
+                <div className="login-notice" role="status">
+                  <span className="login-notice-dot" aria-hidden="true" />
+                  Signing in with Spotify...
+                </div>
+              )}
+
+              {spotifyLoginFailed && (
+                <div className="login-recovery-actions">
+                  <button type="button" className="text-link" onClick={loginWithSpotify}>Try Spotify again</button>
+                  <button type="button" className="text-link" onClick={() => {
+                    setSpotifyLoginFailed(false);
+                    setError("");
+                  }}>Use Email login</button>
+                </div>
+              )}
+
+              {!spotifyLoginProcessing && <form className="login-form" onSubmit={handleSubmit} noValidate>
                 <label className="form-field">
-                  <span>Username</span>
-                  <input type="text" name="username" value={formData.username} onChange={handleChange} autoComplete="username" autoCapitalize="none" spellCheck="false" required />
+                  <span>Email</span>
+                  <input type="email" name="email" value={formData.email} onChange={handleChange} autoComplete="email" autoCapitalize="none" spellCheck="false" required />
                 </label>
                 <label className="form-field">
                   <span>Password</span>
@@ -148,15 +202,15 @@ const Login = () => {
                   <span>{loading ? "Logging in..." : "Log in"}</span>
                   {!loading && <span aria-hidden="true">↗</span>}
                 </button>
-              </form>
+              </form>}
 
-              <div className="login-divider"><span>or</span></div>
+              {!spotifyLoginProcessing && <div className="login-divider"><span>or</span></div>}
 
-              <button className="panel-action panel-action--spotify" type="button" onClick={loginWithSpotify} aria-label="Continue with Spotify">
+              {!spotifyLoginProcessing && <button className="panel-action panel-action--spotify" type="button" onClick={loginWithSpotify} aria-label="Continue with Spotify">
                 <SpotifyIcon /><span>Continue with Spotify</span>
-              </button>
+              </button>}
 
-              <p className="login-footer">No account? <button className="text-link" onClick={() => navigate("/register")} type="button">Create one</button></p>
+              {!spotifyLoginProcessing && <p className="login-footer">No account? <button className="text-link" onClick={() => navigate("/register")} type="button">Create one</button></p>}
             </div>
 
             <p className="login-privacy">Your Spotify credentials stay with Spotify.</p>

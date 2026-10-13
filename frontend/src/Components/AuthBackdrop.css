@@ -35,22 +35,12 @@
   padding: 30px clamp(28px, 5vw, 74px);
 }
 
-.auth-nav__brand .brand-mark__symbol {
-  width: 34px;
-  height: 34px;
-  color: #dbe3dc;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
+.auth-nav__brand {
+  color: #f4f6f3;
 }
 
-.auth-nav__brand .brand-mark__symbol svg { width: 30px; height: 30px; }
-
-.auth-nav__brand .brand-mark__word {
-  color: #f4f6f3;
-  font-size: 0.92rem;
-  font-weight: 600;
-  letter-spacing: 0.015em;
+.auth-nav__brand .brand-mark__symbol {
+  color: #dbe3dc;
 }
 
 .auth-nav__action,
@@ -134,8 +124,6 @@
 
 @media (max-width: 720px) {
   .auth-nav { padding: 22px 20px; }
-  .auth-nav__brand { gap: 8px; }
-  .auth-nav__brand .brand-mark__word { font-size: 0.82rem; }
   .auth-nav__action { width: auto; min-height: 40px; gap: 18px; padding: 0 12px; font-size: 0.72rem; }
   .auth-hero { padding: 120px 22px 38px; }
   .auth-hero__content { margin-left: 0; }

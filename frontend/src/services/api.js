@@ -1,5 +1,5 @@
 import axios from "axios";
-import { clearSession, getToken } from "./authSession";
+import { clearSession, getToken, setSessionExpiredNotice } from "./authSession";
 
 // Production builds must set REACT_APP_API_URL; only local development falls back to localhost.
 export const resolveApiBaseUrl = (env) => {
@@ -33,7 +33,11 @@ api.interceptors.request.use((config) => {
 // Handle 401 errors (logout)
 export const handleUnauthorizedResponse = (error) => {
   if (error.response?.status === 401) {
+    const hadSession = Boolean(getToken());
     clearSession();
+    if (hadSession) {
+      setSessionExpiredNotice();
+    }
     window.location.hash = "#/";
   }
   return Promise.reject(error);
@@ -47,8 +51,13 @@ export const register = async (userData) => {
   return response.data;
 };
 
-export const login = async (username, password) => {
-  const response = await api.post("/api/v1/auth/login", { username, password });
+export const login = async (email, password) => {
+  const response = await api.post("/api/v1/auth/login", { email, password });
+  return response.data;
+};
+
+export const exchangeSpotifySession = async (ticket) => {
+  const response = await api.post("/api/v1/auth/spotify/session", { ticket });
   return response.data;
 };
 

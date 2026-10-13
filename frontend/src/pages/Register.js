@@ -7,6 +7,39 @@ import AuthBackdrop from "../Components/AuthBackdrop";
 import "./Register.css";
 
 const PANEL_EXIT_MS = 360;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const validateRegistration = ({ username, email, password, confirmPassword }) => {
+  const errors = {};
+  const normalizedUsername = username.trim();
+  const normalizedEmail = email.trim();
+
+  if (!normalizedUsername) {
+    errors.username = "Username is required.";
+  } else if (normalizedUsername.length < 3 || normalizedUsername.length > 50) {
+    errors.username = "Username must be between 3 and 50 characters.";
+  }
+
+  if (!normalizedEmail) {
+    errors.email = "Email is required.";
+  } else if (!EMAIL_PATTERN.test(normalizedEmail)) {
+    errors.email = "Enter a valid email address.";
+  }
+
+  if (!password) {
+    errors.password = "Password is required.";
+  } else if (password.length < 10) {
+    errors.password = "Password must be at least 10 characters.";
+  }
+
+  if (!confirmPassword) {
+    errors.confirmPassword = "Confirm your password.";
+  } else if (password !== confirmPassword) {
+    errors.confirmPassword = "Passwords do not match.";
+  }
+
+  return errors;
+};
 
 const Register = () => {
   const navigate = useNavigate();
@@ -17,6 +50,7 @@ const Register = () => {
     confirmPassword: "",
   });
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [spotifyPending, setSpotifyPending] = useState(false);
   const [canContinue, setCanContinue] = useState(false);
@@ -53,9 +87,13 @@ const Register = () => {
   }, [closePanel]);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
+    const { name, value } = e.target;
+    setFormData((current) => ({ ...current, [name]: value }));
+    setFieldErrors((current) => {
+      const next = { ...current };
+      delete next[name];
+      if (name === "password") delete next.confirmPassword;
+      return next;
     });
     setError("");
   };
@@ -64,14 +102,9 @@ const Register = () => {
     e.preventDefault();
     setError("");
 
-    // Validation
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    if (formData.password.length < 10) {
-      setError("Password must be at least 10 characters");
+    const validationErrors = validateRegistration(formData);
+    setFieldErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) {
       return;
     }
 
@@ -79,8 +112,8 @@ const Register = () => {
 
     try {
       const response = await register({
-        username: formData.username,
-        email: formData.email,
+        username: formData.username.trim(),
+        email: formData.email.trim().toLowerCase(),
         password: formData.password,
       });
 
@@ -103,7 +136,26 @@ const Register = () => {
       // Redirect to home page
       navigate("/home");
     } catch (err) {
-      setError(err.response?.data?.error || "Registration failed. Please try again.");
+      const status = err.response?.status;
+      const backendError = err.response?.data?.error;
+
+      if (backendError === "Username already exists") {
+        setFieldErrors({ username: "Username is already in use." });
+      } else if (backendError === "Email already exists") {
+        setFieldErrors({ email: "Email is already in use." });
+      } else if (!err.response) {
+        setError("Cannot connect to the server. Check your connection and try again.");
+      } else if (status === 429) {
+        setError("Too many registration attempts. Please wait and try again.");
+      } else if (status >= 500) {
+        setError("Server could not create the account. Please try again.");
+      } else if (status === 400) {
+        setError("Please check your registration details and try again.");
+      } else if (status === 409) {
+        setError("That username or email is already in use.");
+      } else {
+        setError("Registration could not be completed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -150,8 +202,8 @@ const Register = () => {
           )}
 
           <form className="register-form" onSubmit={handleSubmit} noValidate>
-            <label className="register-form-field">
-              <span>Username</span>
+            <label className={`register-form-field${fieldErrors.username ? " register-form-field--invalid" : ""}`}>
+              <span className="register-field-label">Username</span>
               <input
                 type="text"
                 id="username"
@@ -165,11 +217,14 @@ const Register = () => {
                 required
                 minLength={3}
                 maxLength={50}
+                aria-invalid={Boolean(fieldErrors.username)}
+                aria-describedby={fieldErrors.username ? "username-error" : undefined}
               />
+              {fieldErrors.username && <span id="username-error" className="register-field-error" role="alert">{fieldErrors.username}</span>}
             </label>
 
-            <label className="register-form-field">
-              <span>Email</span>
+            <label className={`register-form-field${fieldErrors.email ? " register-form-field--invalid" : ""}`}>
+              <span className="register-field-label">Email</span>
               <input
                 type="email"
                 id="email"
@@ -179,11 +234,14 @@ const Register = () => {
                 placeholder="your@email.com"
                 autoComplete="email"
                 required
+                aria-invalid={Boolean(fieldErrors.email)}
+                aria-describedby={fieldErrors.email ? "email-error" : undefined}
               />
+              {fieldErrors.email && <span id="email-error" className="register-field-error" role="alert">{fieldErrors.email}</span>}
             </label>
 
-            <label className="register-form-field">
-              <span>Password</span>
+            <label className={`register-form-field${fieldErrors.password ? " register-form-field--invalid" : ""}`}>
+              <span className="register-field-label">Password</span>
               <input
                 type="password"
                 id="password"
@@ -194,11 +252,14 @@ const Register = () => {
                 autoComplete="new-password"
                 required
                 minLength={10}
+                aria-invalid={Boolean(fieldErrors.password)}
+                aria-describedby={fieldErrors.password ? "password-error" : undefined}
               />
+              {fieldErrors.password && <span id="password-error" className="register-field-error" role="alert">{fieldErrors.password}</span>}
             </label>
 
-            <label className="register-form-field">
-              <span>Confirm Password</span>
+            <label className={`register-form-field${fieldErrors.confirmPassword ? " register-form-field--invalid" : ""}`}>
+              <span className="register-field-label">Confirm Password</span>
               <input
                 type="password"
                 id="confirmPassword"
@@ -208,7 +269,10 @@ const Register = () => {
                 placeholder="Re-enter your password"
                 autoComplete="new-password"
                 required
+                aria-invalid={Boolean(fieldErrors.confirmPassword)}
+                aria-describedby={fieldErrors.confirmPassword ? "confirm-password-error" : undefined}
               />
+              {fieldErrors.confirmPassword && <span id="confirm-password-error" className="register-field-error" role="alert">{fieldErrors.confirmPassword}</span>}
             </label>
 
             <button type="submit" className="register-btn" disabled={loading} aria-busy={loading}>
@@ -216,6 +280,11 @@ const Register = () => {
               {!loading && <span aria-hidden="true">↗</span>}
             </button>
           </form>
+
+          <p className="register-login-footer">
+            Already have an account?{" "}
+            <button type="button" className="register-text-link" aria-label="Already have an account? Log in" onClick={() => navigate("/")}>Log in</button>
+          </p>
         </div>
         <p className="register-privacy">Your Spotify credentials stay with Spotify.</p>
         </section>
