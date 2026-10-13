@@ -20,7 +20,8 @@
   * Use one accessible profile menu for Spotify connection state, manual sync,
     Spotify profile access, and logout.
 
-![image](https://github.com/LinChiaWei/spotify_project/assets/62389828/16ce624d-34a9-4629-a7f8-3e072f43e92f)
+<img width="2988" height="1723" alt="image" src="https://github.com/user-attachments/assets/d159dabf-b3be-4891-acf7-8f53af0bd225" />
+
 
 ### Architecture and hosting
   * **Frontend:** React, published as a static site on GitHub Pages.
