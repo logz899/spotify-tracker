@@ -36,98 +36,10 @@
   flex-shrink: 0;
 }
 
-.home-brand .brand-mark__symbol {
-  box-shadow: none;
-}
-
 .home-header-right {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-}
-
-.home-greeting {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  font-weight: 500;
-  margin-right: var(--space-xs);
-  white-space: nowrap;
-  /* Hide on small screens — set in media query */
-}
-
-/* Header buttons */
-.hdr-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border: none;
-  border-radius: var(--radius-pill);
-  font-size: 0.8rem;
-  font-weight: 600;
-  font-family: var(--font-sans);
-  cursor: pointer;
-  transition: background var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast), opacity var(--transition-fast);
-  white-space: nowrap;
-  outline: none;
-  line-height: 1;
-}
-
-.hdr-btn:focus-visible {
-  outline: 2px solid var(--green);
-  outline-offset: 2px;
-}
-
-.hdr-btn--refresh {
-  background: var(--bg-elevated-3);
-  color: var(--text-primary);
-  border: 1px solid var(--border-default);
-}
-
-.hdr-btn--refresh:hover:not(:disabled) {
-  background: var(--bg-elevated-4);
-  border-color: var(--green);
-  color: var(--green);
-}
-
-.hdr-btn--refresh:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.hdr-btn--connect {
-  background: var(--green);
-  color: #000;
-}
-
-.hdr-btn--connect:hover {
-  background: var(--green-bright);
-  box-shadow: var(--shadow-green);
-  transform: translateY(-1px);
-}
-
-.hdr-btn--logout {
-  background: transparent;
-  color: var(--text-tertiary);
-  border: 1px solid var(--border-subtle);
-}
-
-.hdr-btn--logout:hover {
-  background: var(--bg-elevated-3);
-  color: var(--text-secondary);
-  border-color: var(--border-default);
-}
-
-/* Spinning refresh icon */
-.hdr-refresh-icon {
-  display: inline-block;
-  font-size: 13px;
-  line-height: 1;
-  transition: transform 0.3s;
-}
-
-.hdr-btn--refresh:disabled .hdr-refresh-icon {
-  animation: spin 0.8s linear infinite;
 }
 
 /* ============================================
@@ -619,10 +531,6 @@
     height: 56px;
   }
 
-  .home-greeting {
-    display: none;
-  }
-
   .home-body {
     padding: var(--space-md);
   }
@@ -633,10 +541,6 @@
 }
 
 @media (max-width: 480px) {
-  .hdr-btn span.hdr-btn-label {
-    display: none;
-  }
-
   .track-row {
     grid-template-columns: 22px 40px 1fr auto;
     gap: 10px;

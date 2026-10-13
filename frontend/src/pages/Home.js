@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { getRecentSongs, getAllSongs, getSpotifyAuthURL, logout } from "../services/api";
+import {
+  getRecentSongs,
+  getAllSongs,
+  getCurrentUser,
+  getSpotifyAuthURL,
+  logout,
+} from "../services/api";
 import { clearSession, getToken, getUser } from "../services/authSession";
 import TimePeriodFilter from "../Components/TimePeriodFilter";
 import BrandMark from "../Components/BrandMark";
+import ProfileMenu from "../Components/ProfileMenu";
 import "./Home.css";
 
 /* ============================================
@@ -90,10 +97,12 @@ const Home = () => {
   const [allSongs, setAllSongs] = useState([]); // Store all songs from backend
   const [songs, setSongs] = useState([]); // Currently displayed songs
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [filterLoading, setFilterLoading] = useState(false);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [viewMode, setViewMode] = useState("songs"); // 'songs', 'artists', or 'albums'
   const navigate = useNavigate();
@@ -108,7 +117,9 @@ const Home = () => {
       return;
     }
 
-    setUser(getUser());
+    const sessionUser = getUser();
+    setUser(sessionUser);
+    setProfile({ user: sessionUser, spotify: { linked: null }, sync: {} });
 
     // Check if Spotify was just linked
     if (searchParams.get("spotify_linked") === "true") {
@@ -118,8 +129,26 @@ const Home = () => {
     }
 
     fetchSongs();
+    fetchProfile(sessionUser);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate, searchParams]);
+
+  const fetchProfile = async (fallbackUser = user || getUser()) => {
+    try {
+      const data = await getCurrentUser();
+      setProfile(data);
+      if (data?.user) setUser(data.user);
+      return data;
+    } catch (err) {
+      if (err.response?.status === 401) {
+        clearSession();
+        navigate("/");
+      } else {
+        setProfile({ user: fallbackUser, spotify: { linked: null }, sync: {} });
+      }
+      return null;
+    }
+  };
 
   const fetchSongs = async () => {
     try {
@@ -180,13 +209,16 @@ const Home = () => {
   const handleRefresh = async () => {
     try {
       setLoading(true);
+      setSyncing(true);
       setError(null);
 
       await getRecentSongs();
-      await fetchSongs();
+      await Promise.all([fetchSongs(), fetchProfile(user)]);
     } catch (err) {
       setError("Failed to refresh songs. Please try again.");
       setLoading(false);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -262,9 +294,6 @@ const Home = () => {
     albums: albumRankings.length,
   };
 
-  /* ---- Username display ---- */
-  const displayName = user?.username || user?.name || "there";
-
   return (
     <div className="home-page">
       {/* ---- Sticky header ---- */}
@@ -274,41 +303,15 @@ const Home = () => {
         </div>
 
         <div className="home-header-right">
-          {user && (
-            <span className="home-greeting" aria-label={`Logged in as ${displayName}`}>
-              Hey, {displayName}
-            </span>
+          {profile && (
+            <ProfileMenu
+              profile={profile}
+              syncing={syncing}
+              onSync={handleRefresh}
+              onConnect={handleSpotifyConnect}
+              onLogout={handleLogout}
+            />
           )}
-
-          <button
-            className="hdr-btn hdr-btn--refresh"
-            onClick={handleRefresh}
-            disabled={loading}
-            aria-label="Refresh songs from Spotify"
-            title="Sync latest plays from Spotify"
-          >
-            <span className="hdr-refresh-icon" aria-hidden="true">
-              &#8635;
-            </span>
-            <span className="hdr-btn-label">Sync</span>
-          </button>
-
-          {songs.length === 0 && !loading && (
-            <button
-              className="hdr-btn hdr-btn--connect"
-              onClick={handleSpotifyConnect}
-              aria-label="Connect your Spotify account"
-            >
-              <span style={{ width: 14, height: 14, display: "inline-flex", alignItems: "center" }}>
-                <SpotifyMark />
-              </span>
-              <span className="hdr-btn-label">Connect</span>
-            </button>
-          )}
-
-          <button className="hdr-btn hdr-btn--logout" onClick={handleLogout} aria-label="Log out">
-            <span className="hdr-btn-label">Log out</span>
-          </button>
         </div>
       </header>
 
